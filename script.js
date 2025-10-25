@@ -173,3 +173,4 @@ function loop(ts){ const dt=Math.min(50, ts-(lastTick||ts)); lastTick=ts; update
 btnRestart.addEventListener('click', restartLevel);
 showMenu();
 renderMap();
+//jogo gpt
