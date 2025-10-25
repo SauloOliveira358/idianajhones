@@ -1,13 +1,75 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Jogo Quadrado</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ruínas Antigas — Mapa da Árvore & Fases</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <canvas id="gameCanvas"></canvas>
+  <header class="hud">
+    <div class="hud-left">
+      <span id="hudLevel">Fase —</span>
+      <span id="hudCrystals">♦ 0</span>
+      <span id="hudTimer">⏱ 00:00</span>
+    </div>
+    <div class="hud-right">
+      <button id="btnToMap" class="btn" title="Voltar ao mapa (Esc)">Mapa</button>
+      <button id="btnRestart" class="btn" title="Reiniciar fase (R)">↻</button>
+    </div>
+  </header>
+
+  <main>
+    <canvas id="game" width="960" height="540" aria-label="Canvas do jogo Ruínas Antigas"></canvas>
+
+    <!-- Menu inicial -->
+    <section id="screenMenu" class="overlay show">
+      <div class="card">
+        <h1>Ruínas Antigas</h1>
+        <p>Plataforma • Puzzle (solo)</p>
+        <ul class="controls">
+          <li>←/→ ou A/D — Mover</li>
+          <li>↑/Espaço/W — Pular</li>
+          <li>E — Usar alavanca</li>
+          <li>R — Reiniciar | Esc — Voltar ao mapa</li>
+        </ul>
+        <button id="btnPlay" class="cta">Play</button>
+      </div>
+    </section>
+
+    <!-- Mapa da Árvore (seleção de fases) -->
+    <section id="screenMap" class="overlay">
+      <div class="card wide">
+        <h2>Mapa da Árvore</h2>
+        <p>Clique em um nó da árvore para entrar na fase.</p>
+        <div class="map-wrap">
+          <canvas id="map" width="900" height="460" aria-label="Árvore de fases"></canvas>
+        </div>
+        <div class="map-legend">
+          <span class="dot locked"></span> Bloqueada
+          <span class="dot open"></span> Liberada
+          <span class="dot done"></span> Concluída
+        </div>
+      </div>
+    </section>
+
+    <!-- Resultados -->
+    <section id="screenResult" class="overlay">
+      <div class="card">
+        <h2 id="resTitle">Fim</h2>
+        <p id="resInfo"></p>
+        <div class="actions">
+          <button id="btnResultMap" class="cta">Voltar ao Mapa</button>
+          <button id="btnResultRetry" class="btn">Tentar novamente</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <small>Arte/skins ficam por sua conta — este build foca apenas em <b>plataformas e lógica</b>.</small>
+  </footer>
+
   <script src="script.js"></script>
 </body>
 </html>
