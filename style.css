@@ -1,37 +1,159 @@
-* { box-sizing: border-box; }
-:root{
-  --bg:#0d0a0a; --fg:#f5ecd7;
-  --accent:#e2b659; --accent2:#7e4a2f;
-  --ok:#00c853; --warn:#ffb300; --bad:#ff5252;
-  --shadow: rgba(0,0,0,.35);
-}
-html,body{ height:100%; margin:0; background:#0c0908; color:var(--fg); font-family:system-ui,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;}
-main{ min-height:calc(100dvh - 80px); padding-top:54px; display:grid; place-items:center; }
-canvas#game{
-  width:min(96vw,960px); aspect-ratio:16/9; height:auto;
-  background: radial-gradient(900px 480px at 50% 40%, #2b201b 0%, #120e0d 55%, #080606 100%);
-  border:2px solid rgba(255,255,255,.06); border-radius:16px;
-  box-shadow: 0 8px 36px rgba(0,0,0,.55), inset 0 0 120px rgba(0,0,0,.35);
-}
-.hud{ position:fixed; inset:0 0 auto 0; height:54px; display:flex; align-items:center; justify-content:space-between; padding:0 .75rem;
-  background:linear-gradient(180deg, rgba(0,0,0,.6), rgba(0,0,0,.2)); backdrop-filter: blur(6px); z-index:3;}
-.hud-left span{ display:inline-block; margin-right:.5rem; background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.08); padding:.2rem .5rem; border-radius:8px; min-width:90px; text-align:center;}
-.btn{ padding:.3rem .6rem; border-radius:8px; border:1px solid rgba(255,255,255,.2); background:rgba(0,0,0,.35); color:var(--fg); cursor:pointer; }
-.btn:hover{ filter:brightness(1.08); }
-.cta{ padding:.6rem 1rem; border:none; border-radius:12px; background:linear-gradient(180deg,var(--accent),#c99937); color:#1b1412; font-weight:700; cursor:pointer; box-shadow:0 6px 0 #7b5b1e, 0 10px 24px rgba(0,0,0,.4);}
-.cta:active{ transform:translateY(2px); box-shadow:0 4px 0 #7b5b1e, 0 8px 18px rgba(0,0,0,.35); }
-.overlay{ position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.5); z-index:4;}
-.overlay.show{ display:grid; }
-.card{ width:min(92vw,520px); background:#1b1412; border:1px solid rgba(255,255,255,.08); border-radius:16px; box-shadow:0 15px 50px rgba(0,0,0,.6); padding:1rem 1.25rem;}
-.card.wide{ width:min(96vw,980px); }
-.controls{ opacity:.9; margin:.5rem 0 .75rem; }
-.map-wrap{ display:grid; place-items:center; margin:.75rem 0; }
-#map{ width:min(92vw,900px); height:auto; aspect-ratio:900/460; border-radius:12px; background: radial-gradient(600px 300px at 50% 40%, #2c2a20 0%, #17160f 60%, #0b0a06 100%); border:1px solid rgba(255,255,255,.06);
-  box-shadow: inset 0 0 100px rgba(0,0,0,.45), 0 10px 30px rgba(0,0,0,.5);}
-.map-legend{ display:flex; gap:1rem; align-items:center; justify-content:center; font-size:.9rem; opacity:.9;}
-.dot{ display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:.4rem; }
-.dot.locked{ background:#555;}
-.dot.open{ background:#fdd835;}
-.dot.done{ background:#00e676;}
-.footer{ text-align:center; font-size:12px; opacity:.7; padding:.75rem 0 1rem; }
+* { box-sizing: border-box; } /* Inclui padding e bordas no cálculo total do tamanho dos elementos */
 
+:root{
+  /* Variáveis de cores e temas */
+  --bg:#0d0a0a; /* cor de fundo geral */
+  --fg:#f5ecd7; /* cor do texto principal */
+  --accent:#e2b659; /* cor de destaque principal */
+  --accent2:#7e4a2f; /* cor de destaque secundária */
+  --ok:#00c853; /* cor verde (sucesso) */
+  --warn:#ffb300; /* cor amarela (alerta) */
+  --bad:#ff5252; /* cor vermelha (erro) */
+  --shadow: rgba(0,0,0,.35); /* sombra padrão */
+}
+
+html,body{
+  height:100%; /* altura total da tela */
+  margin:0; /* remove margens padrão */
+  background:#0c0908; /* cor de fundo escura */
+  color:var(--fg); /* define cor do texto padrão */
+  font-family:system-ui,Segoe UI,Roboto,Ubuntu,Arial,sans-serif; /* fontes padrão */
+}
+
+main{
+  min-height:calc(100dvh - 80px); /* ocupa quase toda a altura da tela, subtraindo 80px */
+  padding-top:54px; /* espaçamento superior (para não cobrir a HUD) */
+  display:grid; /* usa grid layout */
+  place-items:center; /* centraliza conteúdo no centro da tela */
+}
+
+canvas#game{
+  width:min(96vw,960px); /* define largura máxima de 960px ou 96% da tela */
+  aspect-ratio:16/9; /* mantém proporção 16:9 */
+  height:auto; /* altura automática baseada na proporção */
+  background: radial-gradient(900px 480px at 50% 40%, #2b201b 0%, #120e0d 55%, #080606 100%); /* gradiente de fundo (efeito caverna) */
+  border:2px solid rgba(255,255,255,.06); /* borda sutil clara */
+  border-radius:16px; /* cantos arredondados */
+  box-shadow: 0 8px 36px rgba(0,0,0,.55), inset 0 0 120px rgba(0,0,0,.35); /* sombra externa e interna */
+}
+
+.hud{
+  position:fixed; /* fixa no topo */
+  inset:0 0 auto 0; /* ocupa largura total e fica no topo */
+  height:54px; /* altura da barra */
+  display:flex; /* usa flexbox para organizar */
+  align-items:center; /* alinha verticalmente ao centro */
+  justify-content:space-between; /* separa conteúdo entre as extremidades */
+  padding:0 .75rem; /* espaçamento interno horizontal */
+  background:linear-gradient(180deg, rgba(0,0,0,.6), rgba(0,0,0,.2)); /* fundo com gradiente escuro */
+  backdrop-filter: blur(6px); /* aplica desfoque no fundo */
+  z-index:3; /* sobrepõe outros elementos */
+}
+
+.hud-left span{
+  display:inline-block; /* exibe os spans lado a lado */
+  margin-right:.5rem; /* espaço entre cada span */
+  background:rgba(0,0,0,.35); /* fundo translúcido */
+  border:1px solid rgba(255,255,255,.08); /* borda sutil */
+  padding:.2rem .5rem; /* espaçamento interno */
+  border-radius:8px; /* cantos arredondados */
+  min-width:90px; /* largura mínima */
+  text-align:center; /* centraliza o texto */
+}
+
+.btn{
+  padding:.3rem .6rem; /* espaçamento interno */
+  border-radius:8px; /* cantos arredondados */
+  border:1px solid rgba(255,255,255,.2); /* borda leve */
+  background:rgba(0,0,0,.35); /* fundo translúcido escuro */
+  color:var(--fg); /* texto com a cor principal */
+  cursor:pointer; /* muda o cursor para indicar clique */
+}
+
+.btn:hover{ filter:brightness(1.08); } /* botão fica um pouco mais claro ao passar o mouse */
+
+.cta{
+  padding:.6rem 1rem; /* espaçamento interno */
+  border:none; /* remove borda */
+  border-radius:12px; /* cantos arredondados maiores */
+  background:linear-gradient(180deg,var(--accent),#c99937); /* gradiente dourado */
+  color:#1b1412; /* cor do texto escura para contraste */
+  font-weight:700; /* texto em negrito */
+  cursor:pointer; /* cursor de clique */
+  box-shadow:0 6px 0 #7b5b1e, 0 10px 24px rgba(0,0,0,.4); /* sombra dupla (profundidade) */
+}
+
+.cta:active{
+  transform:translateY(2px); /* move o botão para baixo quando clicado */
+  box-shadow:0 4px 0 #7b5b1e, 0 8px 18px rgba(0,0,0,.35); /* reduz sombra ao clicar */
+}
+
+.overlay{
+  position:fixed; /* cobre toda a tela */
+  inset:0; /* ocupa tudo */
+  display:none; /* inicialmente escondido */
+  place-items:center; /* centraliza o conteúdo */
+  background:rgba(0,0,0,.5); /* fundo translúcido escuro */
+  z-index:4; /* sobrepõe tudo */
+}
+
+.overlay.show{ display:grid; } /* quando tiver a classe .show, exibe o overlay */
+
+.card{
+  width:min(92vw,520px); /* largura máxima limitada */
+  background:#1b1412; /* fundo escuro */
+  border:1px solid rgba(255,255,255,.08); /* borda leve */
+  border-radius:16px; /* cantos arredondados */
+  box-shadow:0 15px 50px rgba(0,0,0,.6); /* sombra forte */
+  padding:1rem 1.25rem; /* espaçamento interno */
+}
+
+.card.wide{ width:min(96vw,980px); } /* versão mais larga do card */
+
+.controls{
+  opacity:.9; /* ligeiramente translúcido */
+  margin:.5rem 0 .75rem; /* espaçamento externo */
+}
+
+.map-wrap{
+  display:grid; /* centraliza conteúdo */
+  place-items:center; /* centraliza vertical e horizontalmente */
+  margin:.75rem 0; /* espaçamento externo */
+}
+
+#map{
+  width:min(92vw,900px); /* largura máxima */
+  height:auto; /* altura proporcional */
+  aspect-ratio:900/460; /* proporção da imagem */
+  border-radius:12px; /* cantos arredondados */
+  background: radial-gradient(600px 300px at 50% 40%, #2c2a20 0%, #17160f 60%, #0b0a06 100%); /* fundo com gradiente */
+  border:1px solid rgba(255,255,255,.06); /* borda leve */
+  box-shadow: inset 0 0 100px rgba(0,0,0,.45), 0 10px 30px rgba(0,0,0,.5); /* sombra interna e externa */
+}
+
+.map-legend{
+  display:flex; /* exibe itens lado a lado */
+  gap:1rem; /* espaço entre eles */
+  align-items:center; /* alinha verticalmente */
+  justify-content:center; /* centraliza horizontalmente */
+  font-size:.9rem; /* tamanho de texto menor */
+  opacity:.9; /* leve transparência */
+}
+
+.dot{
+  display:inline-block; /* exibe como elemento inline com bloco */
+  width:12px; height:12px; /* tamanho do círculo */
+  border-radius:50%; /* forma circular */
+  margin-right:.4rem; /* espaço ao lado do texto */
+}
+
+.dot.locked{ background:#555;} /* cor do ponto quando bloqueado */
+.dot.open{ background:#fdd835;} /* cor do ponto quando aberto */
+.dot.done{ background:#00e676;} /* cor do ponto quando concluído */
+
+.footer{
+  text-align:center; /* centraliza o texto */
+  font-size:12px; /* tamanho pequeno */
+  opacity:.7; /* leve transparência */
+  padding:.75rem 0 1rem; /* espaçamento interno superior/inferior */
+}
