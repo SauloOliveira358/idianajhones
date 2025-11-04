@@ -1,124 +1,687 @@
-const canvas = document.getElementById("gameCanvas"); // obtém o elemento canvas pelo id
-const ctx = canvas.getContext("2d"); // obtém o contexto 2D para desenhar
+// Ruínas Antigas v2 — seleção por Árvore; 5 fases; mecânicas 1..7.
+// -----------------------------------------------------------------
+// Este arquivo implementa:
+// - Estados de tela (MENU, MAPA, JOGO, RESULTADO)
+// - Mapa com "nós" de uma árvore para selecionar fases (treeNodes/Edges)
+// - Motor simples de física (gravidade, atrito, AABB, plataformas móveis)
+// - Gatilhos (alavancas e placas de pressão) que abrem portas (triggers)
+// - Cristais colecionáveis, líquidos letais e caixa empurrável
+// - Loop principal (update/draw) com requestAnimationFrame
+// -----------------------------------------------------------------
 
-canvas.width = 800; // define a largura do canvas
-canvas.height = 500; // define a altura do canvas
+const game = document.getElementById('game');
+const ctx = game.getContext('2d');
+const W = game.width, H = game.height;
 
-// Jogador
-const player = {
-  x: 100, // posição X inicial do jogador
-  y: 100, // posição Y inicial do jogador
-  width: 40, // largura do jogador
-  height: 40, // altura do jogador
-  color: "#00f", // cor do jogador (azul)
-  speed: 5, // velocidade horizontal do jogador
-  velocityY: 0, // velocidade vertical atual (usada para gravidade/pulo)
-  jumpPower: 12, // força do pulo
-  gravity: 0.6, // aceleração da gravidade aplicada por frame
-  onGround: false // flag que indica se o jogador está no chão
-};
+const hudLevel = document.getElementById('hudLevel');
+const hudCrystals = document.getElementById('hudCrystals');
+const hudTimer = document.getElementById('hudTimer');
+const btnRestart = document.getElementById('btnRestart');
+const btnToMap = document.getElementById('btnToMap');
 
-// Plataforma (chão + extras)
-const platforms = [
-  { x: 0, y: 460, width: 800, height: 40 }, // chão principal
-  { x: 300, y: 360, width: 120, height: 20 }, // plataforma 1
-  { x: 500, y: 280, width: 120, height: 20 } // plataforma 2
-];
+const screenMenu = document.getElementById('screenMenu');
+const screenMap  = document.getElementById('screenMap');
+const screenResult = document.getElementById('screenResult');
+const btnPlay = document.getElementById('btnPlay');
+const btnResultMap = document.getElementById('btnResultMap');
+const btnResultRetry = document.getElementById('btnResultRetry');
+const resTitle = document.getElementById('resTitle');
+const resInfo = document.getElementById('resInfo');
 
-const keys = {
-  left: false, // tecla esquerda pressionada
-  right: false, // tecla direita pressionada
-  up: false // tecla de pulo (não usada diretamente para manter pulo só quando onGround)
-};
+const mapCanvas = document.getElementById('map');
+const mapCtx = mapCanvas.getContext('2d');
 
-// Input
-document.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowLeft" || e.key === "a") keys.left = true; // seta movimento à esquerda
-  if (e.key === "ArrowRight" || e.key === "d") keys.right = true; // seta movimento à direita
-  if ((e.key === "ArrowUp" || e.key === "w" || e.key === " ") && player.onGround) {
-    player.velocityY = -player.jumpPower; // aplica impulso de pulo (negativo porque o eixo Y aumenta para baixo)
-    player.onGround = false; // marca que não está mais no chão
+// -------------------------
+// Estados de tela do jogo
+// -------------------------
+const State = { MENU:0, MAP:1, GAME:2, RESULT:3 };
+let state = State.MENU;                 // estado atual
+let currentLevelIndex = -1;             // índice da fase ativa
+let progress = { unlocked: 1, completed: [] }; // progresso (fases liberadas/concluídas)
+
+let timeLeft = 0, frameId;
+const key = {};
+
+// -------------------------
+// Entrada via teclado
+// - Armazena teclas pressionadas
+// - ESC para voltar ao mapa
+// - E para usar alavanca
+// - R para reiniciar fase
+// -------------------------
+window.addEventListener('keydown', (e)=>{
+  key[e.code] = true;
+  if (e.code === 'Escape') gotoMap();
+  if (e.code === 'KeyE') useLever();
+  if (e.code === 'KeyR') restartLevel();
+});
+window.addEventListener('keyup', (e)=> key[e.code] = false);
+
+// -------------------------
+// Física/utilidades
+// -------------------------
+const GRAV = 0.75, FRICTION = 0.85, MAX_FALL = 16;
+
+/** Limita v ao intervalo [a, b] */
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+/** Teste de colisão AABB simples (retângulos alinhados aos eixos) */
+function aabb(a,b){ return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
+
+/** Tempo atual em ms (uso no loop p/ delta time) */
+function now(){ return performance.now(); }
+
+/** Desenha um retângulo com fill e/ou stroke opcionais */
+function drawRect(x,y,w,h, fill, stroke){
+  if (fill){ctx.fillStyle=fill;ctx.fillRect(x,y,w,h);}
+  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.strokeRect(x+1,y+1,w-2,h-2);}
+}
+
+/** Converte segundos em "MM:SS" para o HUD */
+function formatTime(s){
+  const m=Math.floor(s/60).toString().padStart(2,'0');
+  const r=Math.max(0,Math.floor(s%60)).toString().padStart(2,'0');
+  return `${m}:${r}`;
+}
+
+// -------------------------
+// Mapa de fases: nós e ligações (arvore)
+// -------------------------
+const treeNodes=[{id:1,x:100,y:380},{id:2,x:260,y:280},{id:3,x:420,y:190},{id:4,x:600,y:260},{id:5,x:780,y:160}];
+const treeEdges=[[1,2],[2,3],[3,4],[4,5]];
+
+/** Mostra a tela de menu */
+function showMenu(){ state=State.MENU; screenMenu.classList.add('show'); }
+
+/** Esconde todas as telas (menu, mapa, resultado) */
+function hideAll(){
+  screenMenu.classList.remove('show');
+  screenMap.classList.remove('show');
+  screenResult.classList.remove('show');
+}
+
+/** Vai para a tela de mapa; se estava jogando, cancela o frame atual */
+function gotoMap(){
+  if (state===State.GAME) cancelAnimationFrame(frameId);
+  state=State.MAP;
+  hideAll();
+  screenMap.classList.add('show');
+  renderMap(); // redesenha o mapa ao entrar
+  // esconder o gif do personagem fora do jogo
+  if (draw.playerEl) draw.playerEl.style.display='none';
+  // esconder quaisquer GIFs de lava/água quando sai do jogo
+  if (draw.lavaEls) draw.lavaEls.forEach(el => el.style.display='none');
+  if (draw.aguaEls) draw.aguaEls.forEach(el => el.style.display='none');
+  // esconder gifs de cristais
+  if (draw.crystalEls) draw.crystalEls.forEach(el => el.style.display='none');
+}
+btnPlay.addEventListener('click',()=>{ hideAll(); gotoMap(); });
+btnToMap.addEventListener('click', gotoMap);
+
+/**
+ * renderMap()
+ * Desenha o mapa de seleção de fases:
+ * - Fundo com gradiente
+ * - Ramos (edges) conectando os nós
+ * - Nós com cores: cinza (bloqueado), amarelo (liberado), verde (concluído)
+ * - Número da fase dentro do nó
+ */
+function renderMap(){
+  const w=mapCanvas.width,h=mapCanvas.height;
+
+  // fundo
+  mapCtx.clearRect(0,0,w,h);
+  const grd=mapCtx.createLinearGradient(0,0,0,h);
+  grd.addColorStop(0,'#2f2a1b'); grd.addColorStop(1,'#0f0e09');
+  mapCtx.fillStyle=grd; mapCtx.fillRect(0,0,w,h);
+
+  // ramos
+  mapCtx.strokeStyle='#a07a3b'; mapCtx.lineWidth=8; mapCtx.lineCap='round'; mapCtx.beginPath();
+  for (const [a,b] of treeEdges){
+    const na=treeNodes.find(n=>n.id===a), nb=treeNodes.find(n=>n.id===b);
+    mapCtx.moveTo(na.x,na.y); mapCtx.lineTo(nb.x,nb.y);
+  }
+  mapCtx.stroke();
+
+  // nós
+  for (const n of treeNodes){
+    const unlocked=n.id<=progress.unlocked;
+    const done=progress.completed.includes(n.id);
+
+    mapCtx.beginPath();
+    mapCtx.arc(n.x,n.y,16,0,Math.PI*2);
+    mapCtx.fillStyle = done? '#00e676' : (unlocked? '#fdd835' : '#666');
+    mapCtx.fill();
+    mapCtx.lineWidth=3; mapCtx.strokeStyle='#2c1e12'; mapCtx.stroke();
+
+    mapCtx.fillStyle='#1b1412'; mapCtx.font='bold 13px system-ui'; mapCtx.textAlign='center';
+    mapCtx.fillText(String(n.id), n.x, n.y+4);
+  }
+}
+
+// Clique no mapa: se clica num nó liberado, começa a fase correspondente
+mapCanvas.addEventListener('click',(e)=>{
+  const r=mapCanvas.getBoundingClientRect();
+  const x=(e.clientX-r.left)*(mapCanvas.width/r.width),
+        y=(e.clientY-r.top)*(mapCanvas.height/r.height);
+
+  for (const n of treeNodes){
+    if (Math.hypot(x-n.x,y-n.y)<=20 && n.id<=progress.unlocked){
+      startLevel(n.id-1); // fases no array levels começam em 0
+      break;
+    }
   }
 });
 
-document.addEventListener("keyup", (e) => {
-  if (e.key === "ArrowLeft" || e.key === "a") keys.left = false; // libera tecla esquerda
-  if (e.key === "ArrowRight" || e.key === "d") keys.right = false; // libera tecla direita
-});
+// -------------------------
+// Definições das fases (level data)
+// -------------------------
+const levels=[
+  { name:'Fase 1 — O Despertar', timeLimit:90, spawn:{x:60,y:420},
+    platforms:[{x:0,y:500,w:960,h:40},{x:120,y:440,w:160,h:16},{x:320,y:390,w:120,h:16},{x:500,y:340,w:120,h:16},{x:680,y:290,w:140,h:16},{x:820,y:430,w:120,h:16}],
+    movers:[],
+    // Substitui lava e água por GIF de água (agua.gif) mantendo tamanhos/posições
+    liquids:[{x:420,y:486,w:140,h:14,type:'aguaGif'},{x:620,y:486,w:110,h:14,type:'aguaGif'}],
+    crystals:[{x:355,y:350,w:42,h:42},{x:535,y:300,w:42,h:42},{x:710,y:250,w:42,h:42}],
+    doors:[{id:'D1',x:900,y:380,w:36,h:70,open:true,requires:['P1']}],
+    levers:[], plates:[{id:'P1',x:820,y:426,w:40,h:6,pressed:false,opens:['D1']}],
+    boxes:[{x:737,y:264,w:26,h:26,vx:0,vy:0}]},
 
-function checkCollision(rect1, rect2) {
-  return (
-    rect1.x < rect2.x + rect2.width && // verifica sobreposição horizontal (lado esquerdo)
-    rect1.x + rect1.width > rect2.x && // verifica sobreposição horizontal (lado direito)
-    rect1.y < rect2.y + rect2.height && // verifica sobreposição vertical (topo)
-    rect1.y + rect1.height > rect2.y // verifica sobreposição vertical (base)
-  ); // retorna true se os dois retângulos estiverem colidindo
+  { name:'Fase 2 — Câmara da Alavanca', timeLimit:90, spawn:{x:70,y:450},
+    platforms:[{x:0,y:500,w:960,h:40},{x:120,y:430,w:150,h:16},{x:300,y:380,w:120,h:16},{x:460,y:340,w:140,h:16},{x:660,y:300,w:140,h:16},{x:830,y:420,w:130,h:16}],
+    movers:[],
+    // Substitui o ácido por lava.gif e adiciona outra lava no canto direito
+    liquids:[{x:420,y:486,w:120,h:14,type:'lavaGif'},{x:840,y:486,w:120,h:14,type:'lavaGif'}],
+    crystals:[{x:330,y:350,w:20,h:20},{x:490,y:310,w:20,h:20},{x:690,y:270,w:20,h:20}],
+    doors:[{id:'D2',x:900,y:370,w:36,h:80,open:true,requires:['L1']}],
+    levers:[{id:'L1',x:835,y:400,w:18,h:18,active:false,toggles:['D2']}], plates:[], boxes:[]},
+
+  { name:'Fase 3 — Peso do Destino', timeLimit:100, spawn:{x:60,y:450},
+    platforms:[{x:0,y:500,w:960,h:40},{x:120,y:440,w:160,h:16},{x:340,y:390,w:120,h:16},{x:520,y:340,w:120,h:16},{x:700,y:290,w:150,h:16},{x:820,y:430,w:120,h:16}],
+    movers:[],
+    liquids:[{x:410,y:486,w:140,h:14,type:'lava'}],
+    crystals:[{x:360,y:360,w:20,h:20},{x:540,y:310,w:20,h:20},{x:730,y:260,w:20,h:20}],
+    doors:[{id:'D3',x:900,y:380,w:36,h:70,open:true,requires:['P3','L3']}],
+    levers:[{id:'L3',x:720,y:270,w:18,h:18,active:false,toggles:['D3']}],
+    plates:[{id:'P3',x:820,y:426,w:40,h:6,pressed:false,opens:['D3']}],
+    boxes:[{x:770,y:410,w:26,h:26,vx:0,vy:0}]},
+
+  { name:'Fase 4 — Engrenagens Verdes', timeLimit:110, spawn:{x:60,y:450},
+    platforms:[{x:0,y:500,w:960,h:40},{x:140,y:420,w:160,h:16},{x:340,y:360,w:140,h:16},{x:540,y:300,w:140,h:16},{x:740,y:240,w:140,h:16},{x:850,y:430,w:90,h:16}],
+    movers:[],
+    liquids:[{x:470,y:486,w:160,h:14,type:'agua'}],
+    crystals:[{x:370,y:330,w:20,h:20},{x:570,y:270,w:20,h:20},{x:770,y:210,w:20,h:20}],
+    doors:[{id:'D4',x:900,y:360,w:36,h:90,open:true,requires:['L4A','L4B']}],
+    levers:[{id:'L4A',x:340,y:342,w:18,h:18,active:false,toggles:['D4']},{id:'L4B',x:540,y:282,w:18,h:18,active:false,toggles:['D4']}], plates:[], boxes:[]},
+
+  { name:'Fase 5 — Câmara Final', timeLimit:120, spawn:{x:60,y:450},
+    platforms:[{x:0,y:500,w:960,h:40},{x:130,y:430,w:160,h:16},{x:310,y:390,w:120,h:16},{x:480,y:350,w:120,h:16},{x:650,y:310,w:120,h:16},{x:820,y:270,w:120,h:16}],
+    movers:[],
+    liquids:[{x:420,y:486,w:150,h:14,type:'acido'}],
+    crystals:[{x:340,y:360,w:20,h:20},{x:520,y:320,w:20,h:20},{x:690,y:280,w:20,h:20},{x:860,y:240,w:20,h:20}],
+    doors:[{id:'D5',x:900,y:340,w:36,h:110,open:true,requires:['P5','L5A']}],
+    levers:[{id:'L5A',x:820,y:252,w:18,h:18,active:false,toggles:['D5']}],
+    plates:[{id:'P5',x:130,y:426,w:40,h:6,pressed:false,opens:['D5']}],
+    boxes:[{x:170,y:410,w:26,h:26,vx:0,vy:0},{x:780,y:250,w:26,h:26,vx:0,vy:0}]}
+];
+
+let triggers={};
+const player={x:0,y:0,w:24,h:32,vx:0,vy:0,onGround:false,crystals:0,alive:true};
+
+/**
+ * startLevel(idx)
+ */
+function startLevel(idx){
+  currentLevelIndex=idx;
+  const L=levels[idx];
+
+  triggers={};
+  (L.levers||[]).forEach(l=>triggers[l.id]=l.active);
+  (L.plates||[]).forEach(p=>triggers[p.id]=p.pressed);
+  (L.doors||[]).forEach(d=>triggers[d.id]=d.open);
+
+  player.x=L.spawn.x; player.y=L.spawn.y;
+  player.vx=player.vy=0; player.onGround=false; player.crystals=0; player.alive=true;
+
+  timeLeft=L.timeLimit;
+  hudLevel.textContent=L.name;
+  hudCrystals.textContent='♦ 0';
+  hudTimer.textContent='⏱ '+formatTime(timeLeft);
+
+  hideAll(); state=State.GAME; lastTick=now(); frameId=requestAnimationFrame(loop);
+
+  // garantir que o contêiner possa posicionar o gif por cima do canvas
+  if (game.parentElement && getComputedStyle(game.parentElement).position === 'static'){
+    game.parentElement.style.position = 'relative';
+  }
+  // mostrar o gif ao entrar no jogo
+  if (draw.playerEl) draw.playerEl.style.display = '';
+  // garantir que os GIFs possam reaparecer no nível certo
+  if (draw.lavaEls) draw.lavaEls.forEach(el => el.style.display='none');
+  if (draw.aguaEls) draw.aguaEls.forEach(el => el.style.display='none');
+  // esconder gifs de cristais (serão reposicionados no draw)
+  if (draw.crystalEls) draw.crystalEls.forEach(el => el.style.display='none');
 }
 
-function update() {
-  // Movimento lateral
-  if (keys.left) player.x -= player.speed; // move para a esquerda se a tecla estiver pressionada
-  if (keys.right) player.x += player.speed; // move para a direita se a tecla estiver pressionada
+/** Reinicia a fase atual */
+function restartLevel(){ if (state!==State.GAME) return; startLevel(currentLevelIndex); }
 
-  // Gravidade
-  player.velocityY += player.gravity; // aplica gravidade à velocidade vertical
-  player.y += player.velocityY; // atualiza a posição Y com a velocidade vertical
-  player.onGround = false; // assume que não está no chão; será corrigido por detecção de colisão
+/** Vitória */
+function completeLevel(){
+  cancelAnimationFrame(frameId);
+  progress.completed=Array.from(new Set([...progress.completed, currentLevelIndex+1]));
+  if (progress.unlocked<5 && currentLevelIndex+2>progress.unlocked)
+    progress.unlocked=currentLevelIndex+2;
 
-  // Colisão com plataformas
-  platforms.forEach(platform => {
-    if (checkCollision(player, platform)) { // se houver colisão com a plataforma
-      // Verifica se veio de cima
-      if (player.velocityY > 0 && player.y + player.height - player.velocityY <= platform.y) {
-        player.y = platform.y - player.height; // posiciona o jogador em cima da plataforma
-        player.velocityY = 0; // zera a velocidade vertical
-        player.onGround = true; // marca que o jogador está no chão
-      }
-      if (player.velocityY < 0 && player.y - player.velocityY >= platform.y + platform.height) {
-        player.y = platform.y + platform.height; // posiciona o jogador abaixo da plataforma se bateu por baixo
-        player.velocityY = 0; // zera a velocidade vertical ao bater abaixo
-      }
-      // Colisão lateral direita
-      if (
-        player.x + player.width > platform.x && // lado direito do jogador passou da borda esquerda da plataforma
-        player.x < platform.x && // lado esquerdo do jogador está antes da borda esquerda da plataforma
-        player.y + player.height > platform.y && // parte inferior do jogador está abaixo do topo da plataforma
-        player.y < platform.y + platform.height // parte superior do jogador está acima da base da plataforma
-      ) {
-        player.x = platform.x - player.width; // ajusta X para encostar na borda esquerda da plataforma (bloqueia movimento lateral)
-      }
+  resTitle.textContent='Vitória!';
+  resInfo.textContent=`Cristais: ${player.crystals} | Tempo restante: ${formatTime(timeLeft)}`;
+  state=State.RESULT;
+  screenResult.classList.add('show');
+  if (draw.playerEl) draw.playerEl.style.display='none';
+  if (draw.lavaEls) draw.lavaEls.forEach(el => el.style.display='none');
+  if (draw.aguaEls) draw.aguaEls.forEach(el => el.style.display='none');
+  if (draw.crystalEls) draw.crystalEls.forEach(el => el.style.display='none');
+}
 
-      // Colisão lateral esquerda
-      if (
-        player.x < platform.x + platform.width && // lado esquerdo do jogador está antes da borda direita da plataforma
-        player.x + player.width > platform.x + platform.width && // lado direito do jogador passou da borda direita da plataforma
-        player.y + player.height > platform.y && // parte inferior do jogador está abaixo do topo da plataforma
-        player.y < platform.y + platform.height // parte superior do jogador está acima da base da plataforma
-      ) {
-        player.x = platform.x + platform.width; // ajusta X para encostar na borda direita da plataforma (bloqueia movimento lateral)
+/** Derrota */
+function failLevel(reason='Tempo esgotado!'){
+  cancelAnimationFrame(frameId);
+  resTitle.textContent='Derrota';
+  resInfo.textContent=reason;
+  state=State.RESULT;
+  screenResult.classList.add('show');
+  if (draw.playerEl) draw.playerEl.style.display='none';
+  if (draw.lavaEls) draw.lavaEls.forEach(el => el.style.display='none');
+  if (draw.aguaEls) draw.aguaEls.forEach(el => el.style.display='none');
+  if (draw.crystalEls) draw.crystalEls.forEach(el => el.style.display='none');
+}
+btnResultMap.addEventListener('click',()=>{ screenResult.classList.remove('show'); gotoMap(); });
+btnResultRetry.addEventListener('click',()=>{ screenResult.classList.remove('show'); restartLevel(); });
+
+/**
+ * collideRects(a, r)
+ */
+function collideRects(a,r){
+  const dx=(a.x+a.w/2)-(r.x+r.w/2), dy=(a.y+a.h/2)-(r.y+r.h/2);
+  const ox=(a.w/2+r.w/2)-Math.abs(dx), oy=(a.h/2+r.h/2)-Math.abs(dy);
+  if(ox<=0||oy<=0) return null;
+
+  if (ox<oy){
+    if(dx>0) a.x+=ox; else a.x-=ox;
+    a.vx=0;
+    return 'x';
+  } else {
+    if(dy>0) a.y+=oy; else a.y-=oy;
+    a.vy=0;
+    return (dy>0?'bottom':'top');
+  }
+}
+
+/** Alavancas */
+function useLever(){
+  if (state!==State.GAME) return;
+  const L=levels[currentLevelIndex];
+  for(const lever of L.levers){
+    if(aabb(player,lever)){
+      lever.active=!lever.active;
+      triggers[lever.id]=lever.active;
+      updateDoors();
+    }
+  }
+}
+
+/**
+ * update(dt)
+ */
+function update(dt){
+  const L=levels[currentLevelIndex];
+
+  timeLeft -= dt/1000;
+  if (timeLeft<=0) return failLevel('Tempo esgotado!');
+  hudTimer.textContent='⏱ '+formatTime(timeLeft);
+
+  const left=key['ArrowLeft']||key['KeyA'], right=key['ArrowRight']||key['KeyD'], jumpKey=key['ArrowUp']||key['Space']||key['KeyW'];
+  if(left) player.vx-=0.9;
+  if(right) player.vx+=0.9;
+  player.vx*=FRICTION;
+  player.vx=clamp(player.vx,-4.2,4.2);
+
+  player.vy+=GRAV;
+  player.vy=clamp(player.vy,-999,MAX_FALL);
+
+  if(jumpKey && player.onGround){
+    player.vy=-12.5;
+    player.onGround=false;
+  }
+
+  for (const m of L.movers){
+    m.t += m.speed*(dt/16);
+    const u=0.5-0.5*Math.cos((m.t % (Math.PI*2)));
+    m.x=m.ax+(m.bx-m.ax)*u; m.y=m.ay+(m.by-m.ay)*u;
+  }
+
+  player.x += player.vx;
+  for (const r of [...L.platforms, ...L.movers]) collideRects(player,r);
+
+  player.onGround=false;
+  player.y += player.vy;
+  for (const r of [...L.platforms, ...L.movers]){
+    const side=collideRects(player,r);
+    if(side==='top'){
+      player.onGround=true;
+      if(L.movers.includes(r)){
+        player.x += (r.x-(r._px||r.x));
+        player.y += (r.y-(r._py||r.y));
       }
     }
-  });
+    r._px=r.x; r._py=r.y;
+  }
+
+  for (const b of L.boxes){
+    b.vx*=0.9;
+    b.vy+=GRAV; b.vy=clamp(b.vy,-999,MAX_FALL);
+
+    if (aabb(player,b)){
+      if(player.vx>0){ player.x=b.x-player.w; b.vx+=0.6; }
+      else if(player.vx<0){ player.x=b.x+b.w; b.vx-=0.6; }
+    }
+
+    b.x += b.vx; for (const r of [...L.platforms,...L.movers]) collideRects(b,r);
+    b.y += b.vy; for (const r of [...L.platforms,...L.movers]){
+      const side=collideRects(b,r);
+      if(side==='top'){ b.vy=0; }
+    }
+  }
+
+  for (const p of L.plates){
+    const prev=p.pressed;
+    p.pressed=false;
+    if (aabb(player,{x:p.x,y:p.y-2,w:p.w,h:p.h+6})) p.pressed=true;
+    for(const b of L.boxes){ if(aabb(b,{x:p.x,y:p.y-2,w:p.w,h:p.h+6})) p.pressed=true; }
+    if(prev!==p.pressed){
+      triggers[p.id]=p.pressed;
+      updateDoors();
+    }
+  }
+
+  for (const liq of L.liquids){
+    if (aabb(player, liq)){
+      const name = (liq.type==='lavaGif' ? 'lava' : (liq.type==='aguaGif' ? 'água' : liq.type));
+      return failLevel('Você caiu em '+name+'!');
+    }
+  }
+
+  // coleta de cristais (agora por índice para esconder o GIF correspondente)
+  for (let i=0;i<L.crystals.length;i++){
+    const c = L.crystals[i];
+    if(!c.got && aabb(player,c)){
+      c.got=true;
+      if (draw.crystalEls && draw.crystalEls[i]) draw.crystalEls[i].style.display='none';
+      player.crystals++;
+      hudCrystals.textContent='♦ '+player.crystals;
+    }
+  }
+
+  for (const d of L.doors){
+    if(d.open && aabb(player,d)) return completeLevel();
+  }
 }
 
-function drawPlayer() {
-  ctx.fillStyle = player.color; // define a cor do jogador
-  ctx.fillRect(player.x, player.y, player.width, player.height); // desenha o retângulo do jogador
+/**
+ * updateDoors()
+ */
+function updateDoors(){
+  const L=levels[currentLevelIndex];
+  for (const d of L.doors){
+    let ok=true;
+    for(const req of d.requires){
+      if(!triggers[req]){ ok=false; break; }
+    }
+    d.open=ok;
+  }
 }
 
-function drawPlatforms() {
-  ctx.fillStyle = "rgba(0, 0, 0, 1)"; // define a cor das plataformas (preto sólido)
-  platforms.forEach(p => {
-    ctx.fillRect(p.x, p.y, p.width, p.height); // desenha cada plataforma
-  });
+/**
+ * draw()
+ * Renderização do quadro:
+ * - Fundo com gradiente
+ * - Plataformas, movers, líquidos, placas, alavancas, portas
+ * - Cristais não coletados (agora como GIF cristal.gif)
+ * - Caixas e jogador (retângulos estilizados)
+ */
+function draw(){
+  const L=levels[currentLevelIndex];
+
+  // fundo (vídeo apenas no nível 1)
+  if (currentLevelIndex === 0) {
+    if (!draw.bgVideo) {
+      draw.bgVideo = document.createElement('video');
+      draw.bgVideo.src = 'fundo nivel.mp4';
+      draw.bgVideo.loop = true;
+      draw.bgVideo.muted = true;
+      draw.bgVideo.play();
+    }
+    try {
+      ctx.drawImage(draw.bgVideo, 0, 0, W, H);
+    } catch (e) {
+      const g=ctx.createLinearGradient(0,0,0,H);
+      g.addColorStop(0,'#2b221b'); g.addColorStop(1,'#100d0c');
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    }
+
+  // fundo (vídeo no nível 2)
+  } else if (currentLevelIndex === 1) {
+    if (!draw.bgVideo2) {
+      draw.bgVideo2 = document.createElement('video');
+      draw.bgVideo2.src = 'fundo nivel2.mp4';
+      draw.bgVideo2.loop = true;
+      draw.bgVideo2.muted = true;
+      draw.bgVideo2.play();
+    }
+    try {
+      ctx.drawImage(draw.bgVideo2, 0, 0, W, H);
+    } catch (e) {
+      const g=ctx.createLinearGradient(0,0,0,H);
+      g.addColorStop(0,'#2b221b'); g.addColorStop(1,'#100d0c');
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    }
+
+  } else {
+    const g=ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#2b221b'); g.addColorStop(1,'#100d0c');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  }
+
+  for (const p of L.platforms){ drawRect(p.x,p.y,p.w,p.h,'#4c3a2c','#1f150f'); }
+  for (const m of L.movers){ drawRect(m.x,m.y,m.w,m.h,'#6a4e39','#241a13'); }
+
+  // --- LÍQUIDOS ---
+  // Para 'lavaGif' e 'aguaGif' usamos <img> absolutos acima do canvas para manter a animação dos GIFs.
+  // Demais líquidos continuam desenhados no canvas.
+  if (!draw.lavaEls) draw.lavaEls = [];
+  if (!draw.aguaEls) draw.aguaEls = [];
+
+  // pegar retângulo renderizado do canvas e fatores de escala (corrige offset/zoom)
+  const rect = game.getBoundingClientRect();
+  const sx = rect.width  / W;
+  const sy = rect.height / H;
+
+  for (let i=0;i<L.liquids.length;i++){
+    const liq = L.liquids[i];
+    if (liq.type === 'lavaGif'){
+      if (!draw.lavaEls[i]){
+        const img = document.createElement('img');
+        img.src = 'lava.gif';
+        img.alt = 'lava';
+        img.style.position = 'absolute';
+        img.style.pointerEvents = 'none';
+        img.style.userSelect = 'none';
+        img.style.imageRendering = 'pixelated';
+        img.style.zIndex = '1'; // abaixo do personagem
+        if (game.parentElement && getComputedStyle(game.parentElement).position === 'static'){
+          game.parentElement.style.position = 'relative';
+        }
+        (game.parentElement || document.body).appendChild(img);
+        draw.lavaEls[i] = img;
+      }
+      const img = draw.lavaEls[i];
+      const lx = rect.left + liq.x * sx;
+      const ly = rect.top  + liq.y * sy;
+      img.style.left = `${lx}px`;
+      img.style.top  = `${ly}px`;
+      img.style.width  = `${liq.w * sx}px`;
+      img.style.height = `${liq.h * sy}px`;
+      img.style.display = (state===State.GAME) ? '' : 'none';
+    } else if (liq.type === 'aguaGif'){
+      if (!draw.aguaEls[i]){
+        const img = document.createElement('img');
+        img.src = 'agua.gif';
+        img.alt = 'água';
+        img.style.position = 'absolute';
+        img.style.pointerEvents = 'none';
+        img.style.userSelect = 'none';
+        img.style.imageRendering = 'pixelated';
+        img.style.zIndex = '1'; // abaixo do personagem
+        if (game.parentElement && getComputedStyle(game.parentElement).position === 'static'){
+          game.parentElement.style.position = 'relative';
+        }
+        (game.parentElement || document.body).appendChild(img);
+        draw.aguaEls[i] = img;
+      }
+      const img = draw.aguaEls[i];
+      const lx = rect.left + liq.x * sx;
+      const ly = rect.top  + liq.y * sy;
+      img.style.left = `${lx}px`;
+      img.style.top  = `${ly}px`;
+      img.style.width  = `${liq.w * sx}px`;
+      img.style.height = `${liq.h * sy}px`;
+      img.style.display = (state===State.GAME) ? '' : 'none';
+    } else {
+      const color=liq.type==='lava'?'#e65100':(liq.type==='agua'?'#039be5':'#76ff03');
+      drawRect(liq.x,liq.y,liq.w,liq.h,color,'#1a120c');
+    }
+  }
+  // Esconde quaisquer elementos antigos que não existem no nível atual/loop
+  for (let i=L.liquids.length;i<(draw.lavaEls?draw.lavaEls.length:0);i++){
+    if (draw.lavaEls[i]) draw.lavaEls[i].style.display='none';
+  }
+  for (let i=L.liquids.length;i<(draw.aguaEls?draw.aguaEls.length:0);i++){
+    if (draw.aguaEls[i]) draw.aguaEls[i].style.display='none';
+  }
+
+  // --- Personagem mostrado como GIF/estático acima do canvas ---
+  const SCALE = 2; // 2x maior (mude se quiser)
+  if (!draw.playerEl){
+    draw.playerEl = document.createElement('img');
+    draw.playerEl.src = 'bonequin.gif';
+    draw.playerAnimating = true;
+    draw.playerStillURL = null;
+    draw.playerEl.alt = 'jogador';
+    draw.playerEl.style.position = 'absolute';
+    draw.playerEl.style.pointerEvents = 'none';
+    draw.playerEl.style.userSelect = 'none';
+    draw.playerEl.style.imageRendering = 'pixelated';
+    draw.playerEl.style.zIndex = '2'; // acima dos líquidos
+    draw.playerEl.addEventListener('load', ()=>{
+      if (draw.playerStillURL) return;
+      try{
+        const c = document.createElement('canvas');
+        const iw = draw.playerEl.naturalWidth  || player.w*2;
+        const ih = draw.playerEl.naturalHeight || player.h*2;
+        c.width = iw; c.height = ih;
+        const ictx = c.getContext('2d');
+        ictx.drawImage(draw.playerEl, 0, 0, iw, ih);
+        draw.playerStillURL = c.toDataURL('image/png');
+      }catch(e){
+        draw.playerStillURL = null;
+      }
+    }, { once:false });
+    if (game.parentElement && getComputedStyle(game.parentElement).position === 'static'){
+      game.parentElement.style.position = 'relative';
+    }
+    (game.parentElement || document.body).appendChild(draw.playerEl);
+  }
+  const interacting =
+    key['ArrowLeft'] || key['ArrowRight'] || key['ArrowUp'] ||
+    key['KeyA'] || key['KeyD'] || key['KeyW'] || key['Space'];
+  if (interacting){
+    if (!draw.playerAnimating){
+      draw.playerEl.src = 'bonequin.gif';
+      draw.playerAnimating = true;
+    }
+  } else {
+    if (draw.playerAnimating && draw.playerStillURL){
+      draw.playerEl.src = draw.playerStillURL;
+      draw.playerAnimating = false;
+    }
+  }
+
+  // posicionamento do jogador com escala/offset corretos
+  const vw = player.w * SCALE * sx;
+  const vh = player.h * SCALE * sy;
+  const vx = rect.left + (player.x + player.w/2) * sx - vw/2;
+  const vy = rect.top  + (player.y + player.h)   * sy - vh;
+  draw.playerEl.style.left = `${vx}px`;
+  draw.playerEl.style.top  = `${vy}px`;
+  draw.playerEl.style.width  = `${vw}px`;
+  draw.playerEl.style.height = `${vh}px`;
+  draw.playerEl.style.display = '';
+
+  // --- HUD/objetos do nível ---
+  for (const p of L.plates){ drawRect(p.x,p.y,p.w,p.h, p.pressed?'#d4af37':'#8d6e63', '#1f150f'); }
+  for (const l of L.levers){ drawRect(l.x,l.y,l.w,l.h, l.active?'#ffd54f':'#6d4c41', '#1f150f'); }
+  for (const d of L.doors){ drawRect(d.x,d.y,d.w,d.h, d.open?'#00c853':'#7e4a2f', '#140f0c'); }
+
+  // --- CRISTAIS como GIF animado (cristal.gif) ---
+  if (!draw.crystalEls) draw.crystalEls = [];
+  for (let i=0;i<L.crystals.length;i++){
+    const c = L.crystals[i];
+    if (c.got){
+      if (draw.crystalEls[i]) draw.crystalEls[i].style.display='none';
+      continue;
+    }
+    if (!draw.crystalEls[i]){
+      const img = document.createElement('img');
+      img.src = 'cristal.gif'; // animação do cristal
+      img.alt = 'cristal';
+      img.style.position = 'absolute';
+      img.style.pointerEvents = 'none';
+      img.style.userSelect = 'none';
+      img.style.imageRendering = 'pixelated';
+      img.style.zIndex = '2'; // acima dos líquidos; abaixo/igual ao player
+      if (game.parentElement && getComputedStyle(game.parentElement).position === 'static'){
+        game.parentElement.style.position = 'relative';
+      }
+      (game.parentElement || document.body).appendChild(img);
+      draw.crystalEls[i] = img;
+    }
+    const img = draw.crystalEls[i];
+    const cx = rect.left + c.x * sx;
+    const cy = rect.top  + c.y * sy;
+    img.style.left   = `${cx}px`;
+    img.style.top    = `${cy}px`;
+    img.style.width  = `${c.w * sx}px`;
+    img.style.height = `${c.h * sy}px`;
+    img.style.display = (state===State.GAME) ? '' : 'none';
+  }
+
+  // caixas
+  for (const b of L.boxes){ drawRect(b.x,b.y,b.w,b.h,'#8d6e63','#1f150f'); }
 }
 
-function gameLoop() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height); // limpa o canvas a cada frame
-  update(); // atualiza lógica do jogo (física, colisões, etc.)
-  drawPlatforms(); // desenha plataformas
-  drawPlayer(); // desenha jogador
-  requestAnimationFrame(gameLoop); // pede o próximo frame (loop contínuo)
+let lastTick=0;
+
+/**
+ * loop(ts)
+ */
+function loop(ts){
+  const dt=Math.min(50, ts-(lastTick||ts));
+  lastTick=ts;
+  update(dt);
+  draw();
+  if(state===State.GAME) frameId=requestAnimationFrame(loop);
 }
 
-gameLoop(); // inicia o loop do jogo
+btnRestart.addEventListener('click', restartLevel);
+showMenu();
+renderMap();
