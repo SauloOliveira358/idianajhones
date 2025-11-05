@@ -176,54 +176,250 @@ mapCanvas.addEventListener('click',(e)=>{
 // -------------------------
 // Definições das fases (level data)
 // -------------------------
-const levels=[
-  { name:'Fase 1 — O Despertar', timeLimit:90, spawn:{x:60,y:420},
-    platforms:[{x:0,y:500,w:960,h:40},{x:120,y:440,w:160,h:16},{x:320,y:390,w:120,h:16},{x:500,y:340,w:120,h:16},{x:680,y:290,w:140,h:16},{x:820,y:430,w:120,h:16}],
-    movers:[],
-    // Substitui lava e água por GIF de água (agua.gif) mantendo tamanhos/posições
-    liquids:[{x:420,y:486,w:140,h:14,type:'aguaGif'},{x:620,y:486,w:110,h:14,type:'aguaGif'}],
-    crystals:[{x:355,y:350,w:42,h:42},{x:535,y:300,w:42,h:42},{x:710,y:250,w:42,h:42}],
-    doors:[{id:'D1',x:900,y:380,w:36,h:70,open:true,requires:['P1']}],
-    levers:[], plates:[{id:'P1',x:820,y:426,w:40,h:6,pressed:false,opens:['D1']}],
-    boxes:[{x:737,y:264,w:26,h:26,vx:0,vy:0}]},
+// Lista de fases do jogo — cada objeto representa um nível completo
+const levels = [
+  
+  // ===== FASE 1 =====
+  { 
+    name: 'Fase 1 — O Despertar', // Nome da fase (exibido no HUD ou título)
+    timeLimit: 90,                // Tempo limite (em segundos)
+    spawn: {x:60, y:420},         // Posição inicial do jogador (spawn point)
 
-  { name:'Fase 2 — Câmara da Alavanca', timeLimit:90, spawn:{x:70,y:450},
-    platforms:[{x:0,y:500,w:960,h:40},{x:120,y:430,w:150,h:16},{x:300,y:380,w:120,h:16},{x:460,y:340,w:140,h:16},{x:660,y:300,w:140,h:16},{x:830,y:420,w:130,h:16}],
-    movers:[],
-    // Substitui o ácido por lava.gif e adiciona outra lava no canto direito
-    liquids:[{x:420,y:486,w:120,h:14,type:'lavaGif'},{x:840,y:486,w:120,h:14,type:'lavaGif'}],
-    crystals:[{x:330,y:350,w:20,h:20},{x:490,y:310,w:20,h:20},{x:690,y:270,w:20,h:20}],
-    doors:[{id:'D2',x:900,y:370,w:36,h:80,open:true,requires:['L1']}],
-    levers:[{id:'L1',x:835,y:400,w:18,h:18,active:false,toggles:['D2']}], plates:[], boxes:[]},
+    // Plataformas fixas — retângulos sólidos onde o jogador pode andar
+    platforms: [
+      {x:0,y:500,w:960,h:40},    // Chão principal (ocupa toda a base)
+      {x:120,y:440,w:160,h:16},  // Plataforma secundária
+      {x:320,y:390,w:120,h:16},  // ...
+      {x:500,y:340,w:120,h:16},
+      {x:680,y:290,w:140,h:16},
+      {x:820,y:430,w:120,h:16}
+    ],
 
-  { name:'Fase 3 — Peso do Destino', timeLimit:100, spawn:{x:60,y:450},
-    platforms:[{x:0,y:500,w:960,h:40},{x:120,y:440,w:160,h:16},{x:340,y:390,w:120,h:16},{x:520,y:340,w:120,h:16},{x:700,y:290,w:150,h:16},{x:820,y:430,w:120,h:16}],
-    movers:[],
-    liquids:[{x:410,y:486,w:140,h:14,type:'lava'}],
-    crystals:[{x:360,y:360,w:20,h:20},{x:540,y:310,w:20,h:20},{x:730,y:260,w:20,h:20}],
-    doors:[{id:'D3',x:900,y:380,w:36,h:70,open:true,requires:['P3','L3']}],
-    levers:[{id:'L3',x:720,y:270,w:18,h:18,active:false,toggles:['D3']}],
-    plates:[{id:'P3',x:820,y:426,w:40,h:6,pressed:false,opens:['D3']}],
-    boxes:[{x:770,y:410,w:26,h:26,vx:0,vy:0}]},
+    movers: [], // Plataformas móveis (ainda não há nenhuma nesta fase)
 
-  { name:'Fase 4 — Engrenagens Verdes', timeLimit:110, spawn:{x:60,y:450},
-    platforms:[{x:0,y:500,w:960,h:40},{x:140,y:420,w:160,h:16},{x:340,y:360,w:140,h:16},{x:540,y:300,w:140,h:16},{x:740,y:240,w:140,h:16},{x:850,y:430,w:90,h:16}],
-    movers:[],
-    liquids:[{x:470,y:486,w:160,h:14,type:'agua'}],
-    crystals:[{x:370,y:330,w:20,h:20},{x:570,y:270,w:20,h:20},{x:770,y:210,w:20,h:20}],
-    doors:[{id:'D4',x:900,y:360,w:36,h:90,open:true,requires:['L4A','L4B']}],
-    levers:[{id:'L4A',x:340,y:342,w:18,h:18,active:false,toggles:['D4']},{id:'L4B',x:540,y:282,w:18,h:18,active:false,toggles:['D4']}], plates:[], boxes:[]},
+    // Líquidos — podem ser lava, água ou ácido
+    // type:'aguaGif' indica que será renderizada como GIF animado
+    liquids: [
+      {x:420,y:486,w:140,h:14,type:'aguaGif'}, // Lago de água
+      {x:620,y:486,w:110,h:14,type:'aguaGif'}  // Outro pequeno lago
+    ],
 
-  { name:'Fase 5 — Câmara Final', timeLimit:120, spawn:{x:60,y:450},
-    platforms:[{x:0,y:500,w:960,h:40},{x:130,y:430,w:160,h:16},{x:310,y:390,w:120,h:16},{x:480,y:350,w:120,h:16},{x:650,y:310,w:120,h:16},{x:820,y:270,w:120,h:16}],
-    movers:[],
-    liquids:[{x:420,y:486,w:150,h:14,type:'acido'}],
-    crystals:[{x:340,y:360,w:20,h:20},{x:520,y:320,w:20,h:20},{x:690,y:280,w:20,h:20},{x:860,y:240,w:20,h:20}],
-    doors:[{id:'D5',x:900,y:340,w:36,h:110,open:true,requires:['P5','L5A']}],
-    levers:[{id:'L5A',x:820,y:252,w:18,h:18,active:false,toggles:['D5']}],
-    plates:[{id:'P5',x:130,y:426,w:40,h:6,pressed:false,opens:['D5']}],
-    boxes:[{x:170,y:410,w:26,h:26,vx:0,vy:0},{x:780,y:250,w:26,h:26,vx:0,vy:0}]}
+    // Cristais — itens coletáveis (aumentam pontuação ou completam objetivos)
+    crystals: [
+      {x:355,y:350,w:42,h:42},
+      {x:535,y:300,w:42,h:42},
+      {x:710,y:250,w:42,h:42}
+    ],
+
+    // Portas — podem ser abertas por placas ou alavancas
+    doors: [
+      {id:'D1',x:900,y:380,w:36,h:70,open:true,requires:['P1']}
+    ],
+
+    levers: [], // Alavancas (nenhuma nesta fase)
+
+    // Placas de pressão — abrem portas quando ativadas
+    plates: [
+      {id:'P1',x:820,y:426,w:40,h:6,pressed:false,opens:['D1']}
+    ],
+
+    // Caixas empurráveis (podem ser usadas para acionar placas)
+    boxes: [
+      {x:737,y:264,w:26,h:26,vx:0,vy:0}
+    ]
+  },
+
+  // ===== FASE 2 =====
+  { 
+    name: 'Fase 2 — Câmara da Alavanca',
+    timeLimit: 90,
+    spawn: {x:70, y:450},
+
+    // Plataformas
+    platforms: [
+      {x:0,y:500,w:960,h:40},
+      {x:120,y:430,w:150,h:16},
+      {x:300,y:380,w:120,h:16},
+      {x:460,y:340,w:140,h:16},
+      {x:660,y:300,w:140,h:16},
+      {x:830,y:420,w:130,h:16}
+    ],
+
+    movers: [], // Nenhum móvel nesta fase
+
+    // Substitui o ácido por lava animada (lava.gif)
+    liquids: [
+      {x:420,y:486,w:120,h:14,type:'lavaGif'}, // Poça de lava à esquerda
+      {x:840,y:486,w:120,h:14,type:'lavaGif'}  // Poça de lava à direita
+    ],
+
+    // Cristais (menores que na Fase 1)
+    crystals: [
+      {x:330,y:350,w:20,h:20},
+      {x:490,y:310,w:20,h:20},
+      {x:690,y:270,w:20,h:20}
+    ],
+
+    // Porta controlada por uma alavanca
+    doors: [
+      {id:'D2',x:900,y:370,w:36,h:80,open:true,requires:['L1']}
+    ],
+
+    // Alavanca que abre a porta D2
+    levers: [
+      {id:'L1',x:835,y:400,w:18,h:18,active:false,toggles:['D2']}
+    ],
+
+    plates: [], // Nenhuma placa
+    boxes: []   // Nenhuma caixa
+  },
+
+  // ===== FASE 3 =====
+  { 
+    name: 'Fase 3 — Peso do Destino',
+    timeLimit: 100,
+    spawn: {x:60, y:450},
+
+    // Plataformas
+    platforms: [
+      {x:0,y:500,w:960,h:40},
+      {x:120,y:440,w:160,h:16},
+      {x:340,y:390,w:120,h:16},
+      {x:520,y:340,w:120,h:16},
+      {x:700,y:290,w:150,h:16},
+      {x:820,y:430,w:120,h:16}
+    ],
+
+    movers: [], // Sem móveis
+
+    // Lava estática (não animada)
+    liquids: [
+      {x:410,y:486,w:140,h:14,type:'lava'}
+    ],
+
+    // Cristais
+    crystals: [
+      {x:360,y:360,w:20,h:20},
+      {x:540,y:310,w:20,h:20},
+      {x:730,y:260,w:20,h:20}
+    ],
+
+    // Porta que precisa de uma alavanca e uma placa
+    doors: [
+      {id:'D3',x:900,y:380,w:36,h:70,open:true,requires:['P3','L3']}
+    ],
+
+    // Alavanca que faz parte do mecanismo da porta
+    levers: [
+      {id:'L3',x:720,y:270,w:18,h:18,active:false,toggles:['D3']}
+    ],
+
+    // Placa de chão que também abre a porta
+    plates: [
+      {id:'P3',x:820,y:426,w:40,h:6,pressed:false,opens:['D3']}
+    ],
+
+    // Uma caixa que pode ser usada para ativar a placa
+    boxes: [
+      {x:770,y:410,w:26,h:26,vx:0,vy:0}
+    ]
+  },
+
+  // ===== FASE 4 =====
+  { 
+    name: 'Fase 4 — Engrenagens Verdes',
+    timeLimit: 110,
+    spawn: {x:60, y:450},
+
+    platforms: [
+      {x:0,y:500,w:960,h:40},
+      {x:140,y:420,w:160,h:16},
+      {x:340,y:360,w:140,h:16},
+      {x:540,y:300,w:140,h:16},
+      {x:740,y:240,w:140,h:16},
+      {x:850,y:430,w:90,h:16}
+    ],
+
+    movers: [], // Nenhum móvel
+
+    // Água estática (sem GIF)
+    liquids: [
+      {x:470,y:486,w:160,h:14,type:'agua'}
+    ],
+
+    crystals: [
+      {x:370,y:330,w:20,h:20},
+      {x:570,y:270,w:20,h:20},
+      {x:770,y:210,w:20,h:20}
+    ],
+
+    // Porta controlada por duas alavancas
+    doors: [
+      {id:'D4',x:900,y:360,w:36,h:90,open:true,requires:['L4A','L4B']}
+    ],
+
+    // Duas alavancas que precisam ser ativadas para abrir D4
+    levers: [
+      {id:'L4A',x:340,y:342,w:18,h:18,active:false,toggles:['D4']},
+      {id:'L4B',x:540,y:282,w:18,h:18,active:false,toggles:['D4']}
+    ],
+
+    plates: [], // Nenhuma placa
+    boxes: []   // Nenhuma caixa
+  },
+
+  // ===== FASE 5 =====
+  { 
+    name: 'Fase 5 — Câmara Final',
+    timeLimit: 120,
+    spawn: {x:60, y:450},
+
+    platforms: [
+      {x:0,y:500,w:960,h:40},
+      {x:130,y:430,w:160,h:16},
+      {x:310,y:390,w:120,h:16},
+      {x:480,y:350,w:120,h:16},
+      {x:650,y:310,w:120,h:16},
+      {x:820,y:270,w:120,h:16}
+    ],
+
+    movers: [], // Nenhum móvel
+
+    // Ácido — pode causar morte instantânea ao tocar
+    liquids: [
+      {x:420,y:486,w:150,h:14,type:'acido'}
+    ],
+
+    crystals: [
+      {x:340,y:360,w:20,h:20},
+      {x:520,y:320,w:20,h:20},
+      {x:690,y:280,w:20,h:20},
+      {x:860,y:240,w:20,h:20}
+    ],
+
+    // Porta final que requer uma placa e uma alavanca
+    doors: [
+      {id:'D5',x:900,y:340,w:36,h:110,open:true,requires:['P5','L5A']}
+    ],
+
+    // Alavanca que abre a porta D5
+    levers: [
+      {id:'L5A',x:820,y:252,w:18,h:18,active:false,toggles:['D5']}
+    ],
+
+    // Placa de pressão inicial
+    plates: [
+      {id:'P5',x:130,y:426,w:40,h:6,pressed:false,opens:['D5']}
+    ],
+
+    // Duas caixas (uma no início, outra no topo)
+    boxes: [
+      {x:170,y:410,w:26,h:26,vx:0,vy:0},
+      {x:780,y:250,w:26,h:26,vx:0,vy:0}
+    ]
+  }
 ];
+
 
 let triggers={};
 const player={x:0,y:0,w:24,h:32,vx:0,vy:0,onGround:false,crystals:0,alive:true};
@@ -519,61 +715,90 @@ function draw(){
   const sx = rect.width  / W;
   const sy = rect.height / H;
 
-  for (let i=0;i<L.liquids.length;i++){
-    const liq = L.liquids[i];
-    if (liq.type === 'lavaGif'){
-      if (!draw.lavaEls[i]){
-        const img = document.createElement('img');
-        img.src = 'lava.gif';
-        img.alt = 'lava';
-        img.style.position = 'absolute';
-        img.style.pointerEvents = 'none';
-        img.style.userSelect = 'none';
-        img.style.imageRendering = 'pixelated';
-        img.style.zIndex = '1'; // abaixo do personagem
-        if (game.parentElement && getComputedStyle(game.parentElement).position === 'static'){
-          game.parentElement.style.position = 'relative';
-        }
-        (game.parentElement || document.body).appendChild(img);
-        draw.lavaEls[i] = img;
+
+  
+// 🔁 Percorre todos os líquidos do nível atual (lava, água, veneno, etc.)
+for (let i = 0; i < L.liquids.length; i++) {
+  const liq = L.liquids[i]; // referência ao líquido atual
+
+  // 🌋 Se for lava animada (lavaGif)
+  if (liq.type === 'lavaGif') {
+
+    // 🔧 Cria a imagem <img> da lava se ainda não existir
+    if (!draw.lavaEls[i]) {
+      const img = document.createElement('img');
+      img.src = 'lava.gif';              // imagem animada da lava
+      img.alt = 'lava';                  // texto alternativo
+      img.style.position = 'absolute';   // posiciona livremente na tela
+      img.style.pointerEvents = 'none';  // impede clique
+      img.style.userSelect = 'none';     // impede seleção de texto
+      img.style.imageRendering = 'pixelated'; // estilo retrô (pixels visíveis)
+      img.style.zIndex = '1';            // zIndex baixo: fica atrás do player
+
+      // 🧩 Garante que o container do jogo tenha position != static
+      if (game.parentElement && getComputedStyle(game.parentElement).position === 'static') {
+        game.parentElement.style.position = 'relative';
       }
-      const img = draw.lavaEls[i];
-      const lx = rect.left + liq.x * sx;
-      const ly = rect.top  + liq.y * sy;
-      img.style.left = `${lx}px`;
-      img.style.top  = `${ly}px`;
-      img.style.width  = `${liq.w * sx}px`;
-      img.style.height = `${liq.h * sy}px`;
-      img.style.display = (state===State.GAME) ? '' : 'none';
-    } else if (liq.type === 'aguaGif'){
-      if (!draw.aguaEls[i]){
-        const img = document.createElement('img');
-        img.src = 'agua.gif';
-        img.alt = 'água';
-        img.style.position = 'absolute';
-        img.style.pointerEvents = 'none';
-        img.style.userSelect = 'none';
-        img.style.imageRendering = 'pixelated';
-        img.style.zIndex = '1'; // abaixo do personagem
-        if (game.parentElement && getComputedStyle(game.parentElement).position === 'static'){
-          game.parentElement.style.position = 'relative';
-        }
-        (game.parentElement || document.body).appendChild(img);
-        draw.aguaEls[i] = img;
-      }
-      const img = draw.aguaEls[i];
-      const lx = rect.left + liq.x * sx;
-      const ly = rect.top  + liq.y * sy;
-      img.style.left = `${lx}px`;
-      img.style.top  = `${ly}px`;
-      img.style.width  = `${liq.w * sx}px`;
-      img.style.height = `${liq.h * sy}px`;
-      img.style.display = (state===State.GAME) ? '' : 'none';
-    } else {
-      const color=liq.type==='lava'?'#e65100':(liq.type==='agua'?'#039be5':'#76ff03');
-      drawRect(liq.x,liq.y,liq.w,liq.h,color,'#1a120c');
+
+      // 🧱 Adiciona a imagem no mesmo container do jogo
+      (game.parentElement || document.body).appendChild(img);
+      draw.lavaEls[i] = img; // guarda a referência pra reutilizar
     }
+
+    // 🔄 Atualiza posição e tamanho da imagem da lava
+    const img = draw.lavaEls[i];
+    const lx = rect.left + liq.x * sx; // posição X no canvas → tela
+    const ly = rect.top  + liq.y * sy; // posição Y no canvas → tela
+    img.style.left   = `${lx}px`;
+    img.style.top    = `${ly}px`;
+    img.style.width  = `${liq.w * sx}px`;
+    img.style.height = `${liq.h * sy}px`;
+    img.style.display = (state === State.GAME) ? '' : 'none'; // mostra só no jogo
+
+  // 💧 Se for água animada (aguaGif)
+  } else if (liq.type === 'aguaGif') {
+
+    // 🔧 Cria a imagem da água se ainda não existir
+    if (!draw.aguaEls[i]) {
+      const img = document.createElement('img');
+      img.src = 'agua.gif';              // imagem animada da água
+      img.alt = 'água';
+      img.style.position = 'absolute';
+      img.style.pointerEvents = 'none';
+      img.style.userSelect = 'none';
+      img.style.imageRendering = 'pixelated';
+      img.style.zIndex = '1'; // atrás do personagem
+
+      if (game.parentElement && getComputedStyle(game.parentElement).position === 'static') {
+        game.parentElement.style.position = 'relative';
+      }
+
+      (game.parentElement || document.body).appendChild(img);
+      draw.aguaEls[i] = img;
+    }
+
+    // 🔄 Atualiza posição e tamanho da água
+    const img = draw.aguaEls[i];
+    const lx = rect.left + liq.x * sx;
+    const ly = rect.top  + liq.y * sy;
+    img.style.left   = `${lx}px`;
+    img.style.top    = `${ly}px`;
+    img.style.width  = `${liq.w * sx}px`;
+    img.style.height = `${liq.h * sy}px`;
+    img.style.display = (state === State.GAME) ? '' : 'none';
+
+  // 🎨 Se for um líquido simples (sem GIF)
+  } else {
+    // Define a cor conforme o tipo (lava, água, veneno, etc.)
+    const color =
+      liq.type === 'lava' ? '#e65100' :    // laranja forte
+      (liq.type === 'agua' ? '#039be5' :   // azul
+      '#76ff03');                          // verde (veneno)
+    
+    // Desenha um retângulo colorido no canvas
+    drawRect(liq.x, liq.y, liq.w, liq.h, color, '#1a120c');
   }
+}
   // Esconde quaisquer elementos antigos que não existem no nível atual/loop
   for (let i=L.liquids.length;i<(draw.lavaEls?draw.lavaEls.length:0);i++){
     if (draw.lavaEls[i]) draw.lavaEls[i].style.display='none';
