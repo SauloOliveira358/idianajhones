@@ -601,20 +601,58 @@ function draw(){
     }
     (game.parentElement || document.body).appendChild(draw.playerEl);
   }
-  const interacting =
-    key['ArrowLeft'] || key['ArrowRight'] || key['ArrowUp'] ||
-    key['KeyA'] || key['KeyD'] || key['KeyW'] || key['Space'];
-  if (interacting){
-    if (!draw.playerAnimating){
-      draw.playerEl.src = 'bonequin.gif';
-      draw.playerAnimating = true;
-    }
-  } else {
-    if (draw.playerAnimating && draw.playerStillURL){
-      draw.playerEl.src = draw.playerStillURL;
-      draw.playerAnimating = false;
+
+
+
+const goingLeft  = key['ArrowLeft'] || key['KeyA'];
+const goingRight = key['ArrowRight'] || key['KeyD'];
+const goingUp    = key['ArrowUp'] || key['KeyW'];
+const goingSpace = key['Space'];
+
+const interacting = goingLeft || goingRight || goingUp || goingSpace;
+
+// Atualiza a direção mesmo se estiver andando
+if (goingLeft) {
+  if (draw.lastDirection !== 'left') {
+    draw.lastDirection = 'left';
+    // Se já está andando, troca o GIF imediatamente
+    if (draw.playerAnimating) {
+      draw.playerEl.src = 'bonequinesquerda.gif';
     }
   }
+} else if (goingRight) {
+  if (draw.lastDirection !== 'right') {
+    draw.lastDirection = 'right';
+    // Se já está andando, troca o GIF imediatamente
+    if (draw.playerAnimating) {
+      draw.playerEl.src = 'bonequin.gif';
+    }
+  }
+}
+
+// Controle de animação
+if (interacting) {
+  if (!draw.playerAnimating) {
+    if (draw.lastDirection === 'left') {
+      draw.playerEl.src = 'Bonequinesquerda.gif';
+    } else {
+      draw.playerEl.src = 'bonequin.gif';
+    }
+    draw.playerAnimating = true;
+  }
+} else {
+  if (draw.playerAnimating) {
+    if (draw.lastDirection === 'left') {
+      draw.playerEl.src = 'Bonequinesquerdaparado.png';
+    } else {
+      draw.playerEl.src = 'bonequindireitaparado.gif.png';
+    }
+    draw.playerAnimating = false;
+  }
+}
+
+
+
 
   // posicionamento do jogador com escala/offset corretos
   const vw = player.w * SCALE * sx;
