@@ -1,18 +1,61 @@
-* { box-sizing: border-box; }
-:root{
-  --bg:#0d0a0a; --fg:#f5ecd7;
-  --accent:#e2b659; --accent2:#7e4a2f;
-  --ok:#00c853; --warn:#ffb300; --bad:#ff5252;
-  --shadow: rgba(0,0,0,.35);
+/* ====== RESET BÁSICO ====== */
+* {
+  box-sizing: border-box; /* Inclui bordas e padding no cálculo total do tamanho de cada elemento */
 }
-html,body{ height:100%; margin:0; background:#0c0908; color:var(--fg); font-family:system-ui,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;}
-main{ min-height:calc(100dvh - 80px); padding-top:54px; display:grid; place-items:center; }
-canvas#game{
-  width:min(96vw,960px); aspect-ratio:16/9; height:auto;
-  background: radial-gradient(900px 480px at 50% 40%, #2b201b 0%, #120e0d 55%, #080606 100%);
-  border:2px solid rgba(255,255,255,.06); border-radius:16px;
-  box-shadow: 0 8px 36px rgba(0,0,0,.55), inset 0 0 120px rgba(0,0,0,.35);
+
+/* ====== VARIÁVEIS GLOBAIS DE COR E SOMBRA ====== */
+:root {
+  --bg: #0d0a0a;         /* Cor de fundo principal (preto amarronzado) */
+  --fg: #f5ecd7;         /* Cor principal do texto (bege claro) */
+  --accent: #e2b659;     /* Cor de destaque (dourado) */
+  --accent2: #7e4a2f;    /* Cor de destaque secundária (marrom avermelhado) */
+  --ok: #00c853;         /* Verde — usado para indicar sucesso */
+  --warn: #ffb300;       /* Amarelo — usado para aviso */
+  --bad: #ff5252;        /* Vermelho — usado para erro */
+  --shadow: rgba(0,0,0,.35); /* Sombra genérica semitransparente */
 }
+
+/* ====== CONFIGURAÇÃO GERAL DA PÁGINA ====== */
+html, body {
+  height: 100%;                   /* Faz corpo e html ocuparem toda a altura da janela */
+  margin: 0;                      /* Remove margens padrão */
+  background: #0c0908;             /* Fundo escuro sólido */
+  color: var(--fg);               /* Define cor padrão do texto */
+  font-family: system-ui, Segoe UI, Roboto, Ubuntu, Arial, sans-serif; /* Fonte padrão */
+}
+
+/* ====== ÁREA PRINCIPAL (MAIN) ====== */
+main {
+  min-height: calc(100dvh - 80px); /* Garante que o conteúdo ocupe a maior parte da tela (menos o HUD e footer) */
+  padding-top: 54px;              /* Espaço reservado para o HUD fixo no topo */
+  display: grid;                  /* Centraliza o conteúdo (usando grid) */
+  place-items: center;            /* Centraliza horizontal e verticalmente */
+}
+
+/* ====== CANVAS DO JOGO ====== */
+canvas#game {
+  width: min(96vw, 1280px);        /* Usa até 96% da largura da tela, mas nunca passa de 960px */
+  aspect-ratio: 16 / 9;           /* Mantém proporção 16:9 */
+  height: auto;                   /* Calcula altura automaticamente com base na proporção */
+
+  /* Fundo com gradiente radial — dá um visual de profundidade */
+  background: radial-gradient(
+    900px 480px at 50% 40%, 
+    #2b201b 0%, 
+    #120e0d 55%, 
+    #080606 100%
+  );
+
+  /* Bordas e formato visual */
+  border: 2px solid rgba(255,255,255,.06); /* Borda sutil clara */
+  border-radius: 16px;                     /* Bordas arredondadas */
+  
+  /* Efeitos de sombra */
+  box-shadow:
+    0 8px 36px rgba(0,0,0,.55),           /* Sombra externa — dá sensação de profundidade */
+    inset 0 0 120px rgba(0,0,0,.35);      /* Sombra interna — cria um efeito de vinheta */
+}
+
 .hud{ position:fixed; inset:0 0 auto 0; height:54px; display:flex; align-items:center; justify-content:space-between; padding:0 .75rem;
   background:linear-gradient(180deg, rgba(0,0,0,.6), rgba(0,0,0,.2)); backdrop-filter: blur(6px); z-index:3;}
 .hud-left span{ display:inline-block; margin-right:.5rem; background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.08); padding:.2rem .5rem; border-radius:8px; min-width:90px; text-align:center;}

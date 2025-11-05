@@ -377,6 +377,10 @@ function update(dt){
     r._px=r.x; r._py=r.y;
   }
 
+
+
+
+  
   for (const b of L.boxes){
     b.vx*=0.9;
     b.vy+=GRAV; b.vy=clamp(b.vy,-999,MAX_FALL);
@@ -425,7 +429,16 @@ function update(dt){
   for (const d of L.doors){
     if(d.open && aabb(player,d)) return completeLevel();
   }
-}
+  // 🧱 COLISÃO COM AS BORDAS DO CANVAS — paredes invisíveis
+  const canvas = document.getElementById('game');
+  if (player.x < 0) player.x = 0; // parede esquerda
+  if (player.y < 0) player.y = 0; // teto
+  if (player.x + player.w > canvas.width) player.x = canvas.width - player.w; // parede direita
+  if (player.y + player.h > canvas.height) { // chão
+    player.y = canvas.height - player.h;
+    player.vy = 0;
+    player.onGround = true;
+}}
 
 /**
  * updateDoors()
