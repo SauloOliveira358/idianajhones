@@ -582,17 +582,52 @@ function update(dt){
     b.vx*=0.9;
     b.vy+=GRAV; b.vy=clamp(b.vy,-999,MAX_FALL);
 
-    if (aabb(player,b)){
+           if (aabb(player,b)){
+      // Lógica de empurrar (colisão lateral)
       if(player.vx>0){ player.x=b.x-player.w; b.vx+=0.6; }
       else if(player.vx<0){ player.x=b.x+b.w; b.vx-=0.6; }
+
+      // Lógica de colisão vertical (subir na caixa)
+      // Se o jogador está caindo (vy > 0) e a parte de baixo do jogador está invadindo a caixa
+      // e a invasão vertical é menor que a horizontal, é uma colisão de topo.
+      const overlapY = (player.y + player.h) - b.y;
+      const overlapX = Math.min(player.x + player.w, b.x + b.w) - Math.max(player.x, b.x);
+
+      if (player.vy > 0 && overlapY > 0 && overlapY < player.vy + 1 && overlapX > 4) {
+        player.y = b.y - player.h;
+        player.vy = 0;
+        player.onGround = true;
+      }
     }
+
+
 
     b.x += b.vx; for (const r of [...L.platforms,...L.movers]) collideRects(b,r);
     b.y += b.vy; for (const r of [...L.platforms,...L.movers]){
       const side=collideRects(b,r);
       if(side==='top'){ b.vy=0; }
     }
-  }
+    b.y += b.vy; for (const r of [...L.platforms,...L.movers]){
+      const side=collideRects(b,r);
+      if(side==='top'){ b.vy=0; }
+    }
+
+    // Colisão do bloco (caixa) com as bordas do canvas
+    if (b.x < 0) { // parede esquerda
+      b.x = 0;
+      b.vx = 0;
+    }
+    if (b.x + b.w > W) { // parede direita
+      b.x = W - b.w;
+      b.vx = 0;
+    }
+    if (b.y + b.h > H) { // chão (para garantir que não caia para fora)
+      b.y = H - b.h;
+      b.vy = 0;
+    }
+    // Não é necessário colisão com o teto (b.y < 0) para blocos, pois eles caem.
+  } // <--- O loop da caixa agora termina aqui
+  
 
   for (const p of L.plates){
     const prev=p.pressed;
@@ -635,7 +670,12 @@ function update(dt){
     player.y = canvas.height - player.h;
     player.vy = 0;
     player.onGround = true;
-}}
+}
+
+
+}
+
+
 
 /**
  * updateDoors()
