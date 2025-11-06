@@ -41,7 +41,8 @@ let progress = { unlocked: 1, completed: [] }; // progresso (fases liberadas/con
 
 let timeLeft = 0, frameId;
 const key = {};
-
+const imgPlataforma = new Image();
+imgPlataforma.src = 'plataforma.png'; 
 // -------------------------
 // Entrada via teclado
 // - Armazena teclas pressionadas
@@ -187,12 +188,12 @@ const levels = [
 
     // Plataformas fixas — retângulos sólidos onde o jogador pode andar
     platforms: [
-      {x:0,y:500,w:960,h:40},    // Chão principal (ocupa toda a base)
-      {x:120,y:440,w:160,h:16},  // Plataforma secundária
-      {x:320,y:390,w:120,h:16},  // ...
-      {x:500,y:340,w:120,h:16},
-      {x:680,y:290,w:140,h:16},
-      {x:820,y:430,w:120,h:16}
+      {x:0,y:500,w:960,h:40,img:'chao2.png'},    // Chão principal (ocupa toda a base)
+      {x:120,y:440,w:160,h:16, imgPlataforma},  // Plataforma secundária
+      {x:320,y:390,w:120,h:16, imgPlataforma},  // ...
+      {x:500,y:340,w:120,h:16, imgPlataforma},
+      {x:680,y:290,w:140,h:16, imgPlataforma},
+      {x:820,y:430,w:120,h:16,imgPlataforma}
     ],
 
     movers: [], // Plataformas móveis (ainda não há nenhuma nesta fase)
@@ -200,8 +201,8 @@ const levels = [
     // Líquidos — podem ser lava, água ou ácido
     // type:'aguaGif' indica que será renderizada como GIF animado
     liquids: [
-      {x:420,y:486,w:140,h:14,type:'aguaGif'}, // Lago de água
-      {x:620,y:486,w:110,h:14,type:'aguaGif'}  // Outro pequeno lago
+      {x:420,y:499,w:140,h:20,type:'agua1.png'}, // Lago de água
+      {x:620,y:499,w:110,h:20,type:'agua1.png'}  // Outro pequeno lago
     ],
 
     // Cristais — itens coletáveis (aumentam pontuação ou completam objetivos)
@@ -213,14 +214,14 @@ const levels = [
 
     // Portas — podem ser abertas por placas ou alavancas
     doors: [
-      {id:'D1',x:900,y:380,w:36,h:70,open:true,requires:['P1']}
+      {id:'D1',x:900,y:360,w:36,h:70,open:false,requires:['P1'], img:'porta.png'}
     ],
 
     levers: [], // Alavancas (nenhuma nesta fase)
 
     // Placas de pressão — abrem portas quando ativadas
     plates: [
-      {id:'P1',x:820,y:426,w:40,h:6,pressed:false,opens:['D1']}
+      {id:'P1',x:820,y:426,w:40,h:8,pressed:false,opens:['D1']}
     ],
 
     // Caixas empurráveis (podem ser usadas para acionar placas)
@@ -262,7 +263,7 @@ const levels = [
 
     // Porta controlada por uma alavanca
     doors: [
-      {id:'D2',x:900,y:370,w:36,h:80,open:true,requires:['L1']}
+      {id:'D2',x:900,y:370,w:36,h:80,open:false,requires:['L1']}
     ],
 
     // Alavanca que abre a porta D2
@@ -306,7 +307,7 @@ const levels = [
 
     // Porta que precisa de uma alavanca e uma placa
     doors: [
-      {id:'D3',x:900,y:380,w:36,h:70,open:true,requires:['P3','L3']}
+      {id:'D3',x:900,y:380,w:36,h:70,open:false,requires:['P3','L3']}
     ],
 
     // Alavanca que faz parte do mecanismo da porta
@@ -355,7 +356,7 @@ const levels = [
 
     // Porta controlada por duas alavancas
     doors: [
-      {id:'D4',x:900,y:360,w:36,h:90,open:true,requires:['L4A','L4B']}
+      {id:'D4',x:900,y:360,w:36,h:90,open:false,requires:['L4A','L4B']}
     ],
 
     // Duas alavancas que precisam ser ativadas para abrir D4
@@ -399,7 +400,7 @@ const levels = [
 
     // Porta final que requer uma placa e uma alavanca
     doors: [
-      {id:'D5',x:900,y:340,w:36,h:110,open:true,requires:['P5','L5A']}
+      {id:'D5',x:900,y:340,w:36,h:110,open:false,requires:['P5','L5A']}
     ],
 
     // Alavanca que abre a porta D5
@@ -701,7 +702,21 @@ function draw(){
     ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
   }
 
-  for (const p of L.platforms){ drawRect(p.x,p.y,p.w,p.h,'#4c3a2c','#1f150f'); }
+
+for (const p of L.platforms) {
+  if (!p.img) p.img = 'plataforma.png';   // todas plataformas têm imagem padrão
+  if (p.img) {
+    if (!p._imgEl) {
+      p._imgEl = new Image();
+      p._imgEl.src = p.img;
+    }
+    ctx.drawImage(p._imgEl, p.x, p.y, p.w, p.h);
+  } else {
+    drawRect(p.x, p.y, p.w, p.h, '#4c3a2c', '#1f150f');
+  }
+}
+
+
   for (const m of L.movers){ drawRect(m.x,m.y,m.w,m.h,'#6a4e39','#241a13'); }
 
   // --- LÍQUIDOS ---
@@ -716,96 +731,81 @@ function draw(){
   const sy = rect.height / H;
 
 
-  
-// 🔁 Percorre todos os líquidos do nível atual (lava, água, veneno, etc.)
+  // 🔁 Percorre todos os líquidos do nível atual (lava, água, veneno, etc.)
 for (let i = 0; i < L.liquids.length; i++) {
   const liq = L.liquids[i]; // referência ao líquido atual
 
-  // 🌋 Se for lava animada (lavaGif)
+  // Função auxiliar para criar imagem animada ou estática
+  function createLiquidElement(list, src, alt) {
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = alt;
+    img.style.position = 'absolute';
+    img.style.pointerEvents = 'none';
+    img.style.userSelect = 'none';
+    img.style.imageRendering = 'pixelated';
+    img.style.zIndex = '1'; // atrás do personagem
+    (game.parentElement || document.body).appendChild(img);
+    list[i] = img;
+    return img;
+  }
+
+  // lavaGif → lava.gif
   if (liq.type === 'lavaGif') {
-
-    // 🔧 Cria a imagem <img> da lava se ainda não existir
-    if (!draw.lavaEls[i]) {
-      const img = document.createElement('img');
-      img.src = 'lava.gif';              // imagem animada da lava
-      img.alt = 'lava';                  // texto alternativo
-      img.style.position = 'absolute';   // posiciona livremente na tela
-      img.style.pointerEvents = 'none';  // impede clique
-      img.style.userSelect = 'none';     // impede seleção de texto
-      img.style.imageRendering = 'pixelated'; // estilo retrô (pixels visíveis)
-      img.style.zIndex = '1';            // zIndex baixo: fica atrás do player
-
-      // 🧩 Garante que o container do jogo tenha position != static
-      if (game.parentElement && getComputedStyle(game.parentElement).position === 'static') {
-        game.parentElement.style.position = 'relative';
-      }
-
-      // 🧱 Adiciona a imagem no mesmo container do jogo
-      (game.parentElement || document.body).appendChild(img);
-      draw.lavaEls[i] = img; // guarda a referência pra reutilizar
-    }
-
-    // 🔄 Atualiza posição e tamanho da imagem da lava
+    if (!draw.lavaEls[i]) createLiquidElement(draw.lavaEls, 'lava.gif', 'lava');
     const img = draw.lavaEls[i];
-    const lx = rect.left + liq.x * sx; // posição X no canvas → tela
-    const ly = rect.top  + liq.y * sy; // posição Y no canvas → tela
-    img.style.left   = `${lx}px`;
-    img.style.top    = `${ly}px`;
-    img.style.width  = `${liq.w * sx}px`;
+    const lx = rect.left + liq.x * sx;
+    const ly = rect.top  + liq.y * sy;
+    img.style.left = `${lx}px`;
+    img.style.top = `${ly}px`;
+    img.style.width = `${liq.w * sx}px`;
     img.style.height = `${liq.h * sy}px`;
-    img.style.display = (state === State.GAME) ? '' : 'none'; // mostra só no jogo
+    img.style.display = (state === State.GAME) ? '' : 'none';
+  }
 
-  // 💧 Se for água animada (aguaGif)
-  } else if (liq.type === 'aguaGif') {
-
-    // 🔧 Cria a imagem da água se ainda não existir
-    if (!draw.aguaEls[i]) {
-      const img = document.createElement('img');
-      img.src = 'agua.gif';              // imagem animada da água
-      img.alt = 'água';
-      img.style.position = 'absolute';
-      img.style.pointerEvents = 'none';
-      img.style.userSelect = 'none';
-      img.style.imageRendering = 'pixelated';
-      img.style.zIndex = '1'; // atrás do personagem
-
-      if (game.parentElement && getComputedStyle(game.parentElement).position === 'static') {
-        game.parentElement.style.position = 'relative';
-      }
-
-      (game.parentElement || document.body).appendChild(img);
-      draw.aguaEls[i] = img;
-    }
-
-    // 🔄 Atualiza posição e tamanho da água
+  // água animada (aguaGif)
+  else if (liq.type === 'aguaGif') {
+    if (!draw.aguaEls[i]) createLiquidElement(draw.aguaEls, 'agua.gif', 'água');
     const img = draw.aguaEls[i];
     const lx = rect.left + liq.x * sx;
     const ly = rect.top  + liq.y * sy;
-    img.style.left   = `${lx}px`;
-    img.style.top    = `${ly}px`;
-    img.style.width  = `${liq.w * sx}px`;
+    img.style.left = `${lx}px`;
+    img.style.top = `${ly}px`;
+    img.style.width = `${liq.w * sx}px`;
     img.style.height = `${liq.h * sy}px`;
     img.style.display = (state === State.GAME) ? '' : 'none';
+  }
 
-  // 🎨 Se for um líquido simples (sem GIF)
-  } else {
-    // Define a cor conforme o tipo (lava, água, veneno, etc.)
+  // água estática (ex: agua1.png)
+  else if (liq.type.endsWith('.png')) {
+    if (!draw.aguaEls[i]) createLiquidElement(draw.aguaEls, liq.type, 'água estática');
+    const img = draw.aguaEls[i];
+    const lx = rect.left + liq.x * sx;
+    const ly = rect.top  + liq.y * sy;
+    img.style.left = `${lx}px`;
+    img.style.top = `${ly}px`;
+    img.style.width = `${liq.w * sx}px`;
+    img.style.height = `${liq.h * sy}px`;
+    img.style.display = (state === State.GAME) ? '' : 'none';
+  }
+
+  // líquidos simples (cores sólidas)
+  else {
     const color =
-      liq.type === 'lava' ? '#e65100' :    // laranja forte
-      (liq.type === 'agua' ? '#039be5' :   // azul
-      '#76ff03');                          // verde (veneno)
-    
-    // Desenha um retângulo colorido no canvas
+      liq.type === 'lava' ? '#e65100' :
+      liq.type === 'agua' ? '#039be5' :
+      '#76ff03';
     drawRect(liq.x, liq.y, liq.w, liq.h, color, '#1a120c');
   }
 }
-  // Esconde quaisquer elementos antigos que não existem no nível atual/loop
-  for (let i=L.liquids.length;i<(draw.lavaEls?draw.lavaEls.length:0);i++){
-    if (draw.lavaEls[i]) draw.lavaEls[i].style.display='none';
-  }
-  for (let i=L.liquids.length;i<(draw.aguaEls?draw.aguaEls.length:0);i++){
-    if (draw.aguaEls[i]) draw.aguaEls[i].style.display='none';
-  }
+
+// 🔒 Esconde quaisquer elementos antigos que não existem mais
+for (let i = L.liquids.length; i < (draw.lavaEls?.length || 0); i++) {
+  if (draw.lavaEls[i]) draw.lavaEls[i].style.display = 'none';
+}
+for (let i = L.liquids.length; i < (draw.aguaEls?.length || 0); i++) {
+  if (draw.aguaEls[i]) draw.aguaEls[i].style.display = 'none';
+}
 
   // --- Personagem mostrado como GIF/estático acima do canvas ---
   const SCALE = 2; // 2x maior (mude se quiser)
@@ -904,9 +904,43 @@ if (interacting) {
   draw.playerEl.style.display = '';
 
   // --- HUD/objetos do nível ---
-  for (const p of L.plates){ drawRect(p.x,p.y,p.w,p.h, p.pressed?'#d4af37':'#8d6e63', '#1f150f'); }
+  for (const p of L.plates){ drawRect(p.x,p.y,p.w,p.h, p.pressed?'#01cf38ff':'#ff0000ff', '#1f150f'); }
   for (const l of L.levers){ drawRect(l.x,l.y,l.w,l.h, l.active?'#ffd54f':'#6d4c41', '#1f150f'); }
-  for (const d of L.doors){ drawRect(d.x,d.y,d.w,d.h, d.open?'#00c853':'#7e4a2f', '#140f0c'); }
+ // --- PORTAS (invisível quando fechada, aparece quando liberada) ---
+if (!draw.doorEls) draw.doorEls = [];
+
+for (let i = 0; i < L.doors.length; i++) {
+  const d = L.doors[i];
+
+  // cria o elemento de imagem se ainda não existir
+  if (!draw.doorEls[i]) {
+    const img = document.createElement('img');
+    img.src = 'porta.png'; // imagem da porta bloqueando
+    img.alt = 'porta';
+    img.style.position = 'absolute';
+    img.style.pointerEvents = 'none';
+    img.style.userSelect = 'none';
+    img.style.imageRendering = 'pixelated';
+    img.style.zIndex = '2';
+    (game.parentElement || document.body).appendChild(img);
+    draw.doorEls[i] = img;
+  }
+
+  const img = draw.doorEls[i];
+
+  // posição e tamanho
+  const lx = rect.left + d.x * sx;
+  const ly = rect.top + d.y * sy;
+  img.style.left = `${lx}px`;
+  img.style.top = `${ly}px`;
+  img.style.width = `${d.w * sx}px`;
+  img.style.height = `${d.h * sy}px`;
+
+  // se a porta estiver "liberada" (open = true), mostra
+  // se estiver fechada (open = false), esconde
+  img.style.display = d.open ? '' : 'none';
+}
+
 
   // --- CRISTAIS como GIF animado (cristal.gif) ---
   if (!draw.crystalEls) draw.crystalEls = [];
