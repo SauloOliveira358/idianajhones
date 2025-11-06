@@ -263,7 +263,7 @@ const levels = [
 
     // Porta controlada por uma alavanca
     doors: [
-      {id:'D2',x:900,y:370,w:36,h:80,open:false,requires:['L1']}
+      {id:'D2',x:900,y:360,w:36,h:80,open:false,requires:['L1']}
     ],
 
     // Alavanca que abre a porta D2
@@ -307,7 +307,7 @@ const levels = [
 
     // Porta que precisa de uma alavanca e uma placa
     doors: [
-      {id:'D3',x:900,y:380,w:36,h:70,open:false,requires:['P3','L3']}
+      {id:'D3',x:900,y:360,w:36,h:70,open:false,requires:['P3','L3']}
     ],
 
     // Alavanca que faz parte do mecanismo da porta
