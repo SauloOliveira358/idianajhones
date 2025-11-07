@@ -616,23 +616,33 @@ function update(dt){
     b.vx*=0.9;
     b.vy+=GRAV; b.vy=clamp(b.vy,-999,MAX_FALL);
 
-           if (aabb(player,b)){
-      // Lógica de empurrar (colisão lateral)
-      if(player.vx>0){ player.x=b.x-player.w; b.vx+=0.6; }
-      else if(player.vx<0){ player.x=b.x+b.w; b.vx-=0.6; }
-
-      // Lógica de colisão vertical (subir na caixa)
+                      if (aabb(player,b)){
+      // Lógica de colisão vertical (andar em cima)
       // Se o jogador está caindo (vy > 0) e a parte de baixo do jogador está invadindo a caixa
       // e a invasão vertical é menor que a horizontal, é uma colisão de topo.
       const overlapY = (player.y + player.h) - b.y;
       const overlapX = Math.min(player.x + player.w, b.x + b.w) - Math.max(player.x, b.x);
 
+            // Lógica de colisão vertical (andar em cima)
+      // Se o jogador está caindo (vy > 0) e a parte de baixo do jogador está invadindo a caixa
+      // e a invasão vertical é menor que a horizontal, é uma colisão de topo.
+      let isTopCollision = false;
       if (player.vy > 0 && overlapY > 0 && overlapY < player.vy + 1 && overlapX > 4) {
         player.y = b.y - player.h;
         player.vy = 0;
         player.onGround = true;
+        isTopCollision = true;
+      } 
+      
+      // Lógica de empurrar (colisão lateral)
+      // Só aplica se não foi uma colisão de topo
+      if (!isTopCollision) {
+        if(player.vx>0){ player.x=b.x-player.w; b.vx+=0.6; }
+        else if(player.vx<0){ player.x=b.x+b.w; b.vx-=0.6; }
       }
+
     }
+
 
 
 
