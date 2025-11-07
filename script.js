@@ -672,17 +672,28 @@ function update(dt){
     // Não é necessário colisão com o teto (b.y < 0) para blocos, pois eles caem.
   } // <--- O loop da caixa agora termina aqui
   
-
   for (const p of L.plates){
-    const prev=p.pressed;
-    p.pressed=false;
-    if (aabb(player,{x:p.x,y:p.y-2,w:p.w,h:p.h+6})) p.pressed=true;
-    for(const b of L.boxes){ if(aabb(b,{x:p.x,y:p.y-2,w:p.w,h:p.h+6})) p.pressed=true; }
-    if(prev!==p.pressed){
+        const prev = p.pressed;
+    p.pressed = false; // Redefine o estado da placa para 'não pressionada' no início de cada quadro
+
+    // Verifica se o jogador ou alguma caixa está sobre a placa
+    if (aabb(player, {x: p.x, y: p.y - 2, w: p.w, h: p.h + 6})) {
+      p.pressed = true;
+    }
+    for (const b of L.boxes) {
+      if (aabb(b, {x: p.x, y: p.y - 2, w: p.w, h: p.h + 6})) {
+        p.pressed = true;
+      }
+    }
+
+    // Apenas atualiza as portas se o estado da placa mudou (de pressionada para não pressionada, ou vice-versa)
+    if (prev !== p.pressed) {
+
       triggers[p.id]=p.pressed;
       updateDoors();
     }
   }
+
 
   for (const liq of L.liquids){
     if (aabb(player, liq)){
@@ -1024,19 +1035,17 @@ for (let i = 0; i < L.doors.length; i++) {
   // porta fechada → mostra portafechada.png
   // porta abrindo → troca pra porta.png (gif)
   // porta aberta (liberada) → some
-
+// Linhas 1028-1040
   if (!d.open) {
-    // Fechada
+    // Porta Fechada: mostra a imagem de porta fechada
     img.src = 'portafechada.png';
-    img.style.display = '';
-  } else if (d.open && !d._wasOpen) {
-    // Acabou de abrir: troca pro gif de animação
+  } else {
+    // Porta Aberta: mostra a imagem de porta aberta
     img.src = 'porta.png';
-    img.style.display = '';
-    d._wasOpen = true;
-
-    
   }
+
+  // Garante que a porta esteja sempre visível
+  img.style.display = '';
 }
 
 
