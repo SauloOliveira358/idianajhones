@@ -422,46 +422,80 @@ const levels = [
 ];
 
 
+
+// Guarda uma cópia imutável de cada fase
+const baseLevels = JSON.parse(JSON.stringify(levels));
+
+
+
 let triggers={};
 const player={x:0,y:0,w:24,h:32,vx:0,vy:0,onGround:false,crystals:0,alive:true};
 
 /**
  * startLevel(idx)
  */
-function startLevel(idx){
-  currentLevelIndex=idx;
-  const L=levels[idx];
+function startLevel(idx) {
+  currentLevelIndex = idx;
 
-  triggers={};
-  (L.levers||[]).forEach(l=>triggers[l.id]=l.active);
-  (L.plates||[]).forEach(p=>triggers[p.id]=p.pressed);
-  (L.doors||[]).forEach(d=>triggers[d.id]=d.open);
+  // 🧱 Faz uma cópia profunda do nível para resetar tudo
+  const original = baseLevels[idx] || levels[idx]; // baseLevels será o modelo original
+  const L = JSON.parse(JSON.stringify(original));
+  levels[idx] = L; // substitui o nível atual por uma nova cópia limpa
 
-  player.x=L.spawn.x; player.y=L.spawn.y;
-  player.vx=player.vy=0; player.onGround=false; player.crystals=0; player.alive=true;
+  triggers = {};
+  (L.levers || []).forEach(l => triggers[l.id] = l.active);
+  (L.plates || []).forEach(p => triggers[p.id] = p.pressed);
+  (L.doors || []).forEach(d => triggers[d.id] = d.open);
 
-  timeLeft=L.timeLimit;
-  hudLevel.textContent=L.name;
-  hudCrystals.textContent='♦ 0';
-  hudTimer.textContent='⏱ '+formatTime(timeLeft);
+  player.x = L.spawn.x;
+  player.y = L.spawn.y;
+  player.vx = player.vy = 0;
+  player.onGround = false;
+  player.crystals = 0;
+  player.alive = true;
 
-  hideAll(); state=State.GAME; lastTick=now(); frameId=requestAnimationFrame(loop);
+  timeLeft = L.timeLimit;
+  hudLevel.textContent = L.name;
+  hudCrystals.textContent = '♦ 0';
+  hudTimer.textContent = '⏱ ' + formatTime(timeLeft);
 
-  // garantir que o contêiner possa posicionar o gif por cima do canvas
-  if (game.parentElement && getComputedStyle(game.parentElement).position === 'static'){
+  hideAll();
+  state = State.GAME;
+  lastTick = performance.now();
+  frameId = requestAnimationFrame(loop);
+
+  if (game.parentElement && getComputedStyle(game.parentElement).position === 'static') {
     game.parentElement.style.position = 'relative';
   }
-  // mostrar o gif ao entrar no jogo
   if (draw.playerEl) draw.playerEl.style.display = '';
-  // garantir que os GIFs possam reaparecer no nível certo
-  if (draw.lavaEls) draw.lavaEls.forEach(el => el.style.display='none');
-  if (draw.aguaEls) draw.aguaEls.forEach(el => el.style.display='none');
-  // esconder gifs de cristais (serão reposicionados no draw)
-  if (draw.crystalEls) draw.crystalEls.forEach(el => el.style.display='none');
+  if (draw.lavaEls) draw.lavaEls.forEach(el => el.style.display = 'none');
+  if (draw.aguaEls) draw.aguaEls.forEach(el => el.style.display = 'none');
+  if (draw.crystalEls) draw.crystalEls.forEach(el => el.style.display = 'none');
 }
 
-/** Reinicia a fase atual */
-function restartLevel(){ if (state!==State.GAME) return; startLevel(currentLevelIndex); }
+
+/** Reinicia a fase atual corretamente */
+function restartLevel() {
+  // 🧹 Esconde tela de morte, se existir
+  const deathScreen = document.getElementById('deathScreen');
+  if (deathScreen) deathScreen.style.display = 'none';
+
+  // 🔁 Reinicia o nível atual
+  cancelAnimationFrame(frameId);  // cancela loop anterior (de morte)
+  startLevel(currentLevelIndex);  // recria fase e religa o loop
+
+  // ✅ Garante estado vivo e movimento
+  const L = levels[currentLevelIndex];
+  player.x = L.spawn.x;
+  player.y = L.spawn.y;
+  player.vx = 0;
+  player.vy = 0;
+  player.alive = true;
+  player.onGround = false;
+  player.crystals = 0;
+
+  hudCrystals.textContent = '♦ 0';
+}
 
 /** Vitória */
 function completeLevel(){
