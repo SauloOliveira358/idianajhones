@@ -989,7 +989,7 @@ for (let i = 0; i < L.doors.length; i++) {
   // cria o elemento de imagem se ainda não existir
   if (!draw.doorEls[i]) {
     const img = document.createElement('img');
-    img.src = 'porta.png'; // imagem da porta bloqueando
+    img.src = 'portafechada.png'; // imagem inicial: porta fechada
     img.alt = 'porta';
     img.style.position = 'absolute';
     img.style.pointerEvents = 'none';
@@ -1010,9 +1010,23 @@ for (let i = 0; i < L.doors.length; i++) {
   img.style.width = `${d.w * sx}px`;
   img.style.height = `${d.h * sy}px`;
 
-  // se a porta estiver "liberada" (open = true), mostra
-  // se estiver fechada (open = false), esconde
-  img.style.display = d.open ? '' : 'none';
+  // comportamento visual:
+  // porta fechada → mostra portafechada.png
+  // porta abrindo → troca pra porta.png (gif)
+  // porta aberta (liberada) → some
+
+  if (!d.open) {
+    // Fechada
+    img.src = 'portafechada.png';
+    img.style.display = '';
+  } else if (d.open && !d._wasOpen) {
+    // Acabou de abrir: troca pro gif de animação
+    img.src = 'porta.png';
+    img.style.display = '';
+    d._wasOpen = true;
+
+    
+  }
 }
 
 
