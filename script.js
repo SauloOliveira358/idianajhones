@@ -962,6 +962,52 @@ if (goingLeft) {
     }
   }
 }
+if (!draw.doorEls) draw.doorEls = [];
+
+for (let i = 0; i < L.doors.length; i++) {
+  const d = L.doors[i];
+
+  // cria o elemento de imagem se ainda não existir
+  if (!draw.doorEls[i]) {
+    const img = document.createElement('img');
+    img.src = 'portafechada.png'; // imagem inicial: porta fechada
+    img.alt = 'porta';
+    img.style.position = 'absolute';
+    img.style.pointerEvents = 'none';
+    img.style.userSelect = 'none';
+    img.style.imageRendering = 'pixelated';
+    img.style.zIndex = '1';
+    (game.parentElement || document.body).appendChild(img);
+    draw.doorEls[i] = img;
+  }
+
+  const img = draw.doorEls[i];
+
+  // posição e tamanho
+  const lx = rect.left + d.x * sx;
+  const ly = rect.top + d.y * sy;
+  img.style.left = `${lx}px`;
+  img.style.top = `${ly}px`;
+  img.style.width = `${d.w * sx}px`;
+  img.style.height = `${d.h * sy}px`;
+
+  // comportamento visual:
+  // porta fechada → mostra portafechada.png
+  // porta abrindo → troca pra porta.png (gif)
+  // porta aberta (liberada) → some
+// Linhas 1028-1040
+  if (!d.open) {
+    // Porta Fechada: mostra a imagem de porta fechada
+    img.src = 'portafechada.png';
+  } else {
+    // Porta Aberta: mostra a imagem de porta aberta
+    img.src = 'porta.png';
+  }
+
+  // Garante que a porta esteja sempre visível
+  img.style.display = '';
+}
+
 
 // Controle de animação
 if (interacting) {
@@ -1002,51 +1048,6 @@ if (interacting) {
   for (const p of L.plates){ drawRect(p.x,p.y,p.w,p.h, p.pressed?'#01cf38ff':'#ff0000ff', '#1f150f'); }
   for (const l of L.levers){ drawRect(l.x,l.y,l.w,l.h, l.active?'#ffd54f':'#6d4c41', '#1f150f'); }
  // --- PORTAS (invisível quando fechada, aparece quando liberada) ---
-if (!draw.doorEls) draw.doorEls = [];
-
-for (let i = 0; i < L.doors.length; i++) {
-  const d = L.doors[i];
-
-  // cria o elemento de imagem se ainda não existir
-  if (!draw.doorEls[i]) {
-    const img = document.createElement('img');
-    img.src = 'portafechada.png'; // imagem inicial: porta fechada
-    img.alt = 'porta';
-    img.style.position = 'absolute';
-    img.style.pointerEvents = 'none';
-    img.style.userSelect = 'none';
-    img.style.imageRendering = 'pixelated';
-    img.style.zIndex = '2';
-    (game.parentElement || document.body).appendChild(img);
-    draw.doorEls[i] = img;
-  }
-
-  const img = draw.doorEls[i];
-
-  // posição e tamanho
-  const lx = rect.left + d.x * sx;
-  const ly = rect.top + d.y * sy;
-  img.style.left = `${lx}px`;
-  img.style.top = `${ly}px`;
-  img.style.width = `${d.w * sx}px`;
-  img.style.height = `${d.h * sy}px`;
-
-  // comportamento visual:
-  // porta fechada → mostra portafechada.png
-  // porta abrindo → troca pra porta.png (gif)
-  // porta aberta (liberada) → some
-// Linhas 1028-1040
-  if (!d.open) {
-    // Porta Fechada: mostra a imagem de porta fechada
-    img.src = 'portafechada.png';
-  } else {
-    // Porta Aberta: mostra a imagem de porta aberta
-    img.src = 'porta.png';
-  }
-
-  // Garante que a porta esteja sempre visível
-  img.style.display = '';
-}
 
 
   // --- CRISTAIS como GIF animado (cristal.gif) ---
