@@ -36,18 +36,32 @@ const resInfo = document.getElementById('resInfo');
 const mapCanvas = document.getElementById('map');
 const mapCtx = mapCanvas.getContext('2d');
 
+
+// ===== SISTEMA DE PARTÍCULAS =====
+// Array para armazenar partículas de fogo
+let fireParticles = [];
+
+// Estrutura de dados para rastrear caixas em chamas
+let burningBoxes = new Map(); // Map<box, {timer: number, particlesActive: boolean}>
+
 // -------------------------
 // Estados de tela do jogo
 // -------------------------
 const State = { MENU:0, MAP:1, GAME:2, RESULT:3 };
 let state = State.MENU;                 // estado atual
 let currentLevelIndex = -1;             // índice da fase ativa
-let progress = { unlocked: 1, completed: [] }; // progresso (fases liberadas/concluídas)
+let progress = { unlocked: 5, completed: [] }; // progresso (fases liberadas/concluídas)
 
 let timeLeft = 0, frameId;
 const key = {};
 const imgPlataforma = new Image();
 imgPlataforma.src = 'plataforma.png'; 
+
+const imgLeverInactive = new Image();
+imgLeverInactive.src = 'alavanca.png';
+
+const imgLeverActive = new Image();
+imgLeverActive.src = 'alavancaacionada.png';
 // -------------------------
 // Entrada via teclado
 // - Armazena teclas pressionadas
@@ -67,6 +81,7 @@ window.addEventListener('keyup', (e)=> key[e.code] = false);
 // Física/utilidades
 // -------------------------
 const GRAV = 0.75, FRICTION = 0.85, MAX_FALL = 16;
+let boxPushForce = 0.6; // força aplicada ao empurrar caixas
 
 /** Limita v ao intervalo [a, b] */
 function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
@@ -88,6 +103,61 @@ function formatTime(s){
   const m=Math.floor(s/60).toString().padStart(2,'0');
   const r=Math.max(0,Math.floor(s%60)).toString().padStart(2,'0');
   return `${m}:${r}`;
+}
+// ===== FUNÇÕES DO SISTEMA DE PARTÍCULAS =====
+
+/**
+ * Cria partículas de fogo em uma posição específica
+ */
+function createFireParticles(x, y, w, h) {
+  const particleCount = 8; // número de partículas por frame
+  for (let i = 0; i < particleCount; i++) {
+    fireParticles.push({
+      x: x + Math.random() * w,
+      y: y + Math.random() * h,
+      vx: (Math.random() - 0.5) * 2,
+      vy: -Math.random() * 3 - 1, // movimento para cima
+      life: 1.0, // vida da partícula (1.0 = 100%)
+      size: Math.random() * 2 + 1, // tamanho variável
+      color: Math.random() > 0.5 ? '#ff6600' : '#ff3300' // cores de fogo
+    });
+  }
+}
+
+/**
+ * Atualiza as partículas de fogo
+ */
+function updateFireParticles(dt) {
+  for (let i = fireParticles.length - 1; i >= 0; i--) {
+    const p = fireParticles[i];
+    
+    // Atualiza posição
+    p.x += p.vx;
+    p.y += p.vy;
+    
+    // Reduz vida da partícula
+    p.life -= 0.02 * (dt / 16);
+    
+    // Remove partículas mortas
+    if (p.life <= 0) {
+      fireParticles.splice(i, 1);
+    }
+  }
+}
+
+/**
+ * Desenha as partículas de fogo
+ */
+function drawFireParticles() {
+  for (const p of fireParticles) {
+    ctx.save();
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
 }
 
 // -------------------------
@@ -235,50 +305,57 @@ const levels = [
     ]
   },
 
-  // ===== FASE 2 =====
-  { 
-    name: 'Fase 2 — Câmara da Alavanca',
-    timeLimit: 90,
-    spawn: {x:70, y:450},
+  {
+    //FASE 2
+  name: 'Fase 2 — Câmara da Alavanca',
+  timeLimit: 90,
+  spawn: {x:70, y:450},
 
-    // Plataformas
-    platforms: [
-      {x:0,y:500,w:960,h:40},
-      {x:120,y:430,w:150,h:16},
-      {x:300,y:380,w:120,h:16},
-      {x:460,y:340,w:140,h:16},
-      {x:660,y:300,w:140,h:16},
-      {x:830,y:420,w:130,h:16}
-    ],
+  // Plataformas
+  platforms: [
+    {x:0,y:500,w:960,h:40},           // Plataforma 0: Chão (NÃO MUDA)
+    {x:80,y:430,w:140,h:16},          // Plataforma 1: Primeira plataforma normal
+    {x:280,y:340,w:140,h:16},         // Plataforma 2: Segunda plataforma
+    {x:420,y:240,w:140,h:16},         // Plataforma 3: A mais alta, no meio
+    {x:620,y:360,w:140,h:16}          // Plataforma 4: Depois da 3, mais baixa
+  ],
 
-    movers: [], // Nenhum móvel nesta fase
+  movers: [], // Nenhum móvel nesta fase
 
-    // Substitui o ácido por lava animada (lava.gif)
-    liquids: [
-      {x:420,y:486,w:120,h:14,type:'lavaGif'}, // Poça de lava à esquerda
-      {x:840,y:486,w:120,h:14,type:'lavaGif'}  // Poça de lava à direita
-    ],
+  // Lava (só muda eixo X, Y permanece 499)
+  liquids: [
+    {x:270,y:499,w:120,h:20,type:'lava'},   // Lava 1
+    {x:600,y:499,w:150,h:20,type:'lava'}   // Lava 2
+       // Lava 3
+  ],
 
-    // Cristais (menores que na Fase 1)
-    crystals: [
-      {x:330,y:350,w:20,h:20},
-      {x:490,y:310,w:20,h:20},
-      {x:690,y:270,w:20,h:20}
-    ],
+  // Cristais
+  crystals: [
+    {x:310,y:350,w:20,h:20},          // Cristal 1: Perto da plataforma 2
+    {x:450,y:250,w:20,h:20},          // Cristal 2: Perto da plataforma 3 (a mais alta)
+    {x:650,y:330,w:20,h:20}           // Cristal 3: Perto da plataforma 4
+  ],
 
-    // Porta controlada por uma alavanca
-    doors: [
-      {id:'D2',x:900,y:360,w:36,h:80,open:false,requires:['L1']}
-    ],
+  // Porta no meio, em cima da plataforma 3
+  doors: [
+    {id:'D2',x:460,y:172,w:36,h:70,open:false,requires:['L1']}
+  ],
 
-    // Alavanca que abre a porta D2
-    levers: [
-      {id:'L1',x:835,y:400,w:18,h:18,active:false,toggles:['D2']}
-    ],
+  // Alavanca na base da plataforma 4, embaixo das plataformas 2 e 3
+  levers: [
+    {id:'L1',x:650,y:335,w:30,h:30,active:false,toggles:['D2']}
+  ],
 
-    plates: [], // Nenhuma placa
-    boxes: []   // Nenhuma caixa
-  },
+  // Placa de pressão na plataforma 1
+  plates: [
+    {id:'P2',x:100,y:426,w:40,h:8,pressed:false,opens:['D2']}
+  ],
+
+  // Caixa empurrável
+  boxes: [
+    {x:500,y:414,w:26,h:26,vx:0,vy:0, img:'carvao.png'}
+  ]
+},
 
   // ===== FASE 3 =====
   { 
@@ -447,8 +524,14 @@ timerPlataforma = 0
   // 🧱 Faz uma cópia profunda do nível para resetar tudo
   const original = baseLevels[idx] || levels[idx]; // baseLevels será o modelo original
   const L = JSON.parse(JSON.stringify(original));
-  levels[idx] = L; // substitui o nível atual por uma nova cópia limpa
 
+  levels[idx] = L; // substitui o nível atual por uma nova cópia limpa
+// Ajustar velocidade da caixa conforme a fase
+if (idx === 1) {  // Fase 2 (índice 1)
+  boxPushForce = 3;    // Dobra a velocidade (0.6 * 2)
+} else {
+  boxPushForce = 0.6;    // Velocidade normal
+}
   triggers = {};
   (L.levers || []).forEach(l => triggers[l.id] = l.active);
   (L.plates || []).forEach(p => triggers[p.id] = p.pressed);
@@ -459,6 +542,10 @@ timerPlataforma = 0
   player.vx = player.vy = 0;
   player.onGround = false;
   player.crystals = 0;
+    // Limpa sistema de partículas e caixas em chamas
+  fireParticles = [];
+  burningBoxes.clear();
+
   player.alive = true;
 
   timeLeft = L.timeLimit;
@@ -613,6 +700,7 @@ function update(dt){
 // Garantimos que estamos usando as plataformas corretas na fase
 // --- DETECTA SAÍDA DA PLATAFORMA 2 PARA A DIREITA ---
 // plat2 é L.platforms[1], plat3 é L.platforms[2]
+if (currentLevelIndex === 0) {
 const plat2 = L.platforms[2];
 const plat3 = L.platforms[3];
 
@@ -635,20 +723,6 @@ if (!eventoJaOcorreu && (player.x + player.w) > (plat2.x + plat2.w) && player.vx
   eventoJaOcorreu = true;
   timerPlataforma = tempoRetorno; // inicia contagem (tempo em ms)
 }
-
-// colisões normais ...
-const side = collideRects(player, r);
-if (side === 'top') {
-  player.onGround = true;
-  if (L.movers.includes(r)) {
-    player.x += (r.x - (r._px || r.x));
-    player.y += (r.y - (r._py || r.y));
-  }
-}
-r._px = r.x; r._py = r.y;
-
-// ... (continua seu código de caixas/placas/liquidos etc)
-
 // --- TIMER DA PLATAFORMA (reversão) ---
 if (timerPlataforma > 0) {
   timerPlataforma -= dt;
@@ -669,6 +743,21 @@ if (timerPlataforma > 0) {
     timerPlataforma = 0;
   }
 }
+}
+// colisões normais ...
+const side = collideRects(player, r);
+if (side === 'top') {
+  player.onGround = true;
+  if (L.movers.includes(r)) {
+    player.x += (r.x - (r._px || r.x));
+    player.y += (r.y - (r._py || r.y));
+  }
+}
+r._px = r.x; r._py = r.y;
+
+// ... (continua seu código de caixas/placas/liquidos etc)
+
+
 
   }
 
@@ -707,14 +796,14 @@ if (timerPlataforma > 0) {
     const penRight = (b.x + b.w) - player.x;
 
     if (penLeft <= penRight) {
-      // bateu do lado esquerdo da caixa
-      player.x = b.x - player.w;
-      b.vx += 0.6; // empurra caixa para a direita
-    } else {
-      // bateu do lado direito da caixa
-      player.x = b.x + b.w;
-      b.vx -= 0.6; // empurra caixa para a esquerda
-    }
+  // bateu do lado esquerdo da caixa
+  player.x = b.x - player.w;
+  b.vx += boxPushForce; // empurra caixa para a direita (velocidade varia por fase)
+} else {
+  // bateu do lado direito da caixa
+  player.x = b.x + b.w;
+  b.vx -= boxPushForce; // empurra caixa para a esquerda (velocidade varia por fase)
+}
   }
 }
 
@@ -733,6 +822,21 @@ if (timerPlataforma > 0) {
     if (b.x < 0) { b.x = 0; b.vx = 0; }
     if (b.x + b.w > W) { b.x = W - b.w; b.vx = 0; }
     if (b.y + b.h > H) { b.y = H - b.h; b.vy = 0; }
+      // ===== NOVO: DETECÇÃO DE COLISÃO CAIXA-LAVA (FASE 2) =====
+    if (currentLevelIndex === 1) { // Fase 2 (índice 1)
+      for (const liq of L.liquids) {
+        if (liq.type === 'lava' && aabb(b, liq)) {
+          // Se a caixa tocou na lava e ainda não está queimando
+          if (!burningBoxes.has(b)) {
+            burningBoxes.set(b, {
+              timer: 5000, // 5 segundos em ms
+              particlesActive: true
+            });
+          }
+        }
+      }
+    }
+
   }
 
   
@@ -749,6 +853,29 @@ if (timerPlataforma > 0) {
         p.pressed = true;
       }
     }
+  // ===== ATUALIZA CAIXAS EM CHAMAS =====
+  for (const [box, data] of burningBoxes.entries()) {
+    if (data.particlesActive) {
+      // Cria partículas de fogo na posição da caixa
+      createFireParticles(box.x, box.y, box.w, box.h);
+      
+      // Reduz o timer
+      data.timer -= dt;
+      
+      // Se o timer acabou, remove a caixa
+      if (data.timer <= 0) {
+        // Remove a caixa do array de caixas do nível
+        const idx = L.boxes.indexOf(box);
+        if (idx !== -1) {
+          L.boxes.splice(idx, 1);
+        }
+        burningBoxes.delete(box);
+      }
+    }
+  }
+  
+  // Atualiza partículas de fogo
+  updateFireParticles(dt);
 
     // Apenas atualiza as portas se o estado da placa mudou (de pressionada para não pressionada, ou vice-versa)
     if (prev !== p.pressed) {
@@ -913,8 +1040,8 @@ for (let i = 0; i < L.liquids.length; i++) {
   }
 
   // lavaGif → lava.gif
-  if (liq.type === 'lavaGif') {
-    if (!draw.lavaEls[i]) createLiquidElement(draw.lavaEls, 'lava.gif', 'lava');
+  if (liq.type === 'lava') {
+    if (!draw.lavaEls[i]) createLiquidElement(draw.lavaEls, 'lava3.gif', 'lava');
     const img = draw.lavaEls[i];
     const lx = rect.left + liq.x * sx;
     const ly = rect.top  + liq.y * sy;
@@ -1116,7 +1243,11 @@ if (interacting) {
 
   // --- HUD/objetos do nível ---
   for (const p of L.plates){ drawRect(p.x,p.y,p.w,p.h, p.pressed?'#01cf38ff':'#ff0000ff', '#1f150f'); }
-  for (const l of L.levers){ drawRect(l.x,l.y,l.w,l.h, l.active?'#ffd54f':'#6d4c41', '#1f150f'); }
+// Desenhar alavancas com imagens PNG
+for (const l of L.levers) {
+  const leverImg = l.active ? imgLeverActive : imgLeverInactive;
+  ctx.drawImage(leverImg, l.x, l.y, l.w, l.h);
+}
  // --- PORTAS (invisível quando fechada, aparece quando liberada) ---
 
 
@@ -1159,8 +1290,10 @@ if (interacting) {
     draw.boxImgs = {}; // Usar um objeto para armazenar imagens por nome
   }
 
-  for (const b of L.boxes) {
-    const imgPath = 'bloco6.png'; // Caminho para a sua imagem
+    for (const b of L.boxes) {
+    // Usa a imagem definida na caixa (b.img) ou 'bloco6.png' como padrão
+    const imgPath = b.img || 'bloco6.png'; 
+    
     if (!draw.boxImgs[imgPath]) {
       draw.boxImgs[imgPath] = new Image();
       draw.boxImgs[imgPath].src = imgPath;
@@ -1174,7 +1307,10 @@ if (interacting) {
       drawRect(b.x, b.y, b.w, b.h, '#8d6e63', '#1f150f');
     }
   }
- 
+
+   // ===== NOVO: DESENHA PARTÍCULAS DE FOGO =====
+  drawFireParticles();
+
 }
 
 let lastTick=0;
