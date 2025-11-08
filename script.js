@@ -1323,7 +1323,9 @@ function loop(ts){
   lastTick=ts;
   update(dt);
   draw();
-  if(state===State.GAME) frameId=requestAnimationFrame(loop);
+  // Voltando ao original para congelar as telas de vitória/derrota
+if(state===State.GAME) frameId=requestAnimationFrame(loop);
+
 }
 
 btnRestart.addEventListener('click', restartLevel);
