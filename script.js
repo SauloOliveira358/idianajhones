@@ -8,6 +8,11 @@
 // - Cristais colecionáveis, líquidos letais e caixa empurrável
 // - Loop principal (update/draw) com requestAnimationFrame
 // -----------------------------------------------------------------
+let eventoJaOcorreu = false;
+
+let tempoRetorno = 20000;
+let timerPlataforma = 0;
+
 
 const game = document.getElementById('game');
 const ctx = game.getContext('2d');
@@ -436,7 +441,9 @@ const player={x:0,y:0,w:24,h:32,vx:0,vy:0,onGround:false,crystals:0,alive:true};
  */
 function startLevel(idx) {
   currentLevelIndex = idx;
-
+eventoJaOcorreu = false; 
+tempoRetorno = 10000
+timerPlataforma = 0
   // 🧱 Faz uma cópia profunda do nível para resetar tudo
   const original = baseLevels[idx] || levels[idx]; // baseLevels será o modelo original
   const L = JSON.parse(JSON.stringify(original));
@@ -600,15 +607,69 @@ function update(dt){
   player.onGround=false;
   player.y += player.vy;
   for (const r of [...L.platforms, ...L.movers]){
-    const side=collideRects(player,r);
-    if(side==='top'){
-      player.onGround=true;
-      if(L.movers.includes(r)){
-        player.x += (r.x-(r._px||r.x));
-        player.y += (r.y-(r._py||r.y));
-      }
-    }
-    r._px=r.x; r._py=r.y;
+    // --- DETECTA SAÍDA DA PLATAFORMA 2 PARA A DIREITA ---
+// >>> INÍCIO DO NOVO CÓDIGO <<<
+
+// Garantimos que estamos usando as plataformas corretas na fase
+// --- DETECTA SAÍDA DA PLATAFORMA 2 PARA A DIREITA ---
+// plat2 é L.platforms[1], plat3 é L.platforms[2]
+const plat2 = L.platforms[2];
+const plat3 = L.platforms[3];
+
+// Verifica se jogador passou COMPLETAMENTE pela borda direita de plat2
+// usamos player.x + player.w (borda direita do jogador)
+if (!eventoJaOcorreu && (player.x + player.w) > (plat2.x + plat2.w) && player.vx > 0) {
+  // guarda o centro atual de plat3
+  const centerX = plat3.x + plat3.w / 2;
+  const centerY = plat3.y + plat3.h / 2;
+
+  // troca largura/altura mantendo o centro no mesmo lugar
+  const newW = plat3.h;
+  const newH = plat3.w;
+  plat3.w = newW;
+  plat3.h = newH;
+  // recalcula x,y para manter o centro igual
+  plat3.x = centerX - plat3.w / 2;
+  plat3.y = centerY - plat3.h / 2;
+
+  eventoJaOcorreu = true;
+  timerPlataforma = tempoRetorno; // inicia contagem (tempo em ms)
+}
+
+// colisões normais ...
+const side = collideRects(player, r);
+if (side === 'top') {
+  player.onGround = true;
+  if (L.movers.includes(r)) {
+    player.x += (r.x - (r._px || r.x));
+    player.y += (r.y - (r._py || r.y));
+  }
+}
+r._px = r.x; r._py = r.y;
+
+// ... (continua seu código de caixas/placas/liquidos etc)
+
+// --- TIMER DA PLATAFORMA (reversão) ---
+if (timerPlataforma > 0) {
+  timerPlataforma -= dt;
+  if (timerPlataforma <= 0 && eventoJaOcorreu) {
+    // volta ao normal: troca w/h novamente mantendo o centro
+    const centerX = plat3.x + plat3.w / 2;
+    const centerY = plat3.y + plat3.h / 2;
+
+    const newW = plat3.h; // swap de volta
+    const newH = plat3.w;
+    plat3.w = newW;
+    plat3.h = newH;
+    plat3.x = centerX - plat3.w / 2;
+    plat3.y = centerY - plat3.h / 2;
+
+    // reseta para permitir novo evento futuramente
+    
+    timerPlataforma = 0;
+  }
+}
+
   }
 
 
@@ -729,6 +790,9 @@ function update(dt){
     player.vy = 0;
     player.onGround = true;
 }
+// Temporizador para desfazer o giro
+
+
 
 
 }
