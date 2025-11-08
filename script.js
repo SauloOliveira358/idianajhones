@@ -612,65 +612,65 @@ function update(dt){
 
 
   
-  for (const b of L.boxes){
-    b.vx*=0.9;
-    b.vy+=GRAV; b.vy=clamp(b.vy,-999,MAX_FALL);
+    for (const b of L.boxes){
+    // aplica atrito vertical/horizontal e gravidade na caixa
+    b.vx *= 0.9;
+    b.vy += GRAV;
+    b.vy = clamp(b.vy, -999, MAX_FALL);
 
-                      if (aabb(player,b)){
-      // Lógica de colisão vertical (andar em cima)
-      // Se o jogador está caindo (vy > 0) e a parte de baixo do jogador está invadindo a caixa
-      // e a invasão vertical é menor que a horizontal, é uma colisão de topo.
-      const overlapY = (player.y + player.h) - b.y;
-      const overlapX = Math.min(player.x + player.w, b.x + b.w) - Math.max(player.x, b.x);
+    // --- colisão jogador <-> caixa ---
+  if (aabb(player, b)) {
 
-            // Lógica de colisão vertical (andar em cima)
-      // Se o jogador está caindo (vy > 0) e a parte de baixo do jogador está invadindo a caixa
-      // e a invasão vertical é menor que a horizontal, é uma colisão de topo.
-      let isTopCollision = false;
-      if (player.vy > 0 && overlapY > 0 && overlapY < player.vy + 1 && overlapX > 4) {
-        player.y = b.y - player.h;
-        player.vy = 0;
-        player.onGround = true;
-        isTopCollision = true;
-      } 
-      
-      // Lógica de empurrar (colisão lateral)
-      // Só aplica se não foi uma colisão de topo
-      if (!isTopCollision) {
-        if(player.vx>0){ player.x=b.x-player.w; b.vx+=0.6; }
-        else if(player.vx<0){ player.x=b.x+b.w; b.vx-=0.6; }
-      }
+  // Posições anteriores (para detectar se veio de cima)
+  const prevY = player.y - player.vy;
+  const prevBottom = prevY + player.h;
 
+  // Checa se encostou pela parte de cima da caixa
+  let isTopCollision = false;
+  if (player.vy >= 0 && prevBottom <= b.y) {
+    // Jogador está em cima da caixa
+    player.y = b.y - player.h;
+    player.vy = 0;
+    player.onGround = true;
+    isTopCollision = true;
+  }
+
+  // Se NÃO está em cima → só aí pode empurrar
+  if (!isTopCollision) {
+
+    // Calcula penetração lateral mínima
+    const penLeft  = (player.x + player.w) - b.x;
+    const penRight = (b.x + b.w) - player.x;
+
+    if (penLeft <= penRight) {
+      // bateu do lado esquerdo da caixa
+      player.x = b.x - player.w;
+      b.vx += 0.6; // empurra caixa para a direita
+    } else {
+      // bateu do lado direito da caixa
+      player.x = b.x + b.w;
+      b.vx -= 0.6; // empurra caixa para a esquerda
+    }
+  }
+}
+
+
+    // movimento da caixa e colisões com plataformas/movers
+    b.x += b.vx;
+    for (const r of [...L.platforms, ...L.movers]) collideRects(b, r);
+
+    b.y += b.vy;
+    for (const r of [...L.platforms, ...L.movers]) {
+      const side = collideRects(b, r);
+      if (side === 'top') { b.vy = 0; }
     }
 
+    // limitações nas bordas do canvas
+    if (b.x < 0) { b.x = 0; b.vx = 0; }
+    if (b.x + b.w > W) { b.x = W - b.w; b.vx = 0; }
+    if (b.y + b.h > H) { b.y = H - b.h; b.vy = 0; }
+  }
 
-
-
-    b.x += b.vx; for (const r of [...L.platforms,...L.movers]) collideRects(b,r);
-    b.y += b.vy; for (const r of [...L.platforms,...L.movers]){
-      const side=collideRects(b,r);
-      if(side==='top'){ b.vy=0; }
-    }
-    b.y += b.vy; for (const r of [...L.platforms,...L.movers]){
-      const side=collideRects(b,r);
-      if(side==='top'){ b.vy=0; }
-    }
-
-    // Colisão do bloco (caixa) com as bordas do canvas
-    if (b.x < 0) { // parede esquerda
-      b.x = 0;
-      b.vx = 0;
-    }
-    if (b.x + b.w > W) { // parede direita
-      b.x = W - b.w;
-      b.vx = 0;
-    }
-    if (b.y + b.h > H) { // chão (para garantir que não caia para fora)
-      b.y = H - b.h;
-      b.vy = 0;
-    }
-    // Não é necessário colisão com o teto (b.y < 0) para blocos, pois eles caem.
-  } // <--- O loop da caixa agora termina aqui
   
   for (const p of L.plates){
         const prev = p.pressed;
@@ -1088,7 +1088,7 @@ for (let i = 0; i < L.doors.length; i++) {
   }
 
   for (const b of L.boxes) {
-    const imgPath = 'bloco1.png'; // Caminho para a sua imagem
+    const imgPath = 'bloco6.png'; // Caminho para a sua imagem
     if (!draw.boxImgs[imgPath]) {
       draw.boxImgs[imgPath] = new Image();
       draw.boxImgs[imgPath].src = imgPath;
