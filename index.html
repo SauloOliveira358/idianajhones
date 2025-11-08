@@ -23,17 +23,22 @@
     <canvas id="game" width="960" height="540" aria-label="Canvas do jogo Ruínas Antigas"></canvas>
 
     <!-- Menu inicial -->
+     <!-- Menu inicial -->
     <section id="screenMenu" class="overlay show">
+      <video id="menuVideo" autoplay loop muted playsinline>
+  <source src="fundocenario.mp4" type="video/mp4">
+</video>
       <div class="card">
-        <h1>Ruínas Antigas</h1>
-        <p>Plataforma • Puzzle (solo)</p>
+        <h1>IDIANJHONES</h1>
+        <button id="btnPlay" class="cta">Iniciar Jogo</button>
         <ul class="controls">
-          <li>←/→ ou A/D — Mover</li>
-          <li>↑/Espaço/W — Pular</li>
-          <li>E — Usar alavanca</li>
-          <li>R — Reiniciar | Esc — Voltar ao mapa</li>
-        </ul>
-        <button id="btnPlay" class="cta">Play</button>
+  <li><span class="arrow">⬅</span> / <span class="arrow">➡</span> — Mover</li>
+  <li><span class="arrow">⬆</span> / <span class="key">⎵ Espaço</span> — Pular</li>
+  <li><span class="key">E</span> — Usar alavanca</li>
+  <li><span class="key">R</span> — Reiniciar &nbsp; | &nbsp; <span class="key">Esc</span> — Voltar ao mapa</li>
+</ul>
+
+
       </div>
     </section>
 

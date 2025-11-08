@@ -78,3 +78,52 @@ canvas#game {
 .dot.done{ background:#00e676;}
 .footer{ text-align:center; font-size:12px; opacity:.7; padding:.75rem 0 1rem; }
 
+#menuVideo {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  filter: brightness(0.6);
+}
+
+#screenMenu {
+  z-index: 2;
+}
+
+#screenMenu .card {
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px);
+  text-align: center;
+}
+.controls {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+  text-align: center;
+  font-size: 1.05rem;
+  line-height: 1.9rem;
+}
+
+.controls li {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+}
+
+.key {
+  padding: .15rem .5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(0,0,0,.35);
+  font-weight: 600;
+}
+
+.arrow {
+  font-size: 1.25rem;
+  color: var(--accent); /* sua cor dourada */
+  font-weight: 700;
+  filter: drop-shadow(0 0 6px rgba(226,182,89,.65));
+}
