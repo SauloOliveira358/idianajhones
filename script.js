@@ -501,6 +501,7 @@ function restartLevel() {
 function completeLevel(){
   cancelAnimationFrame(frameId);
   progress.completed=Array.from(new Set([...progress.completed, currentLevelIndex+1]));
+  if (draw.playerEl) draw.playerEl.style.display='none';
   if (progress.unlocked<5 && currentLevelIndex+2>progress.unlocked)
     progress.unlocked=currentLevelIndex+2;
 
@@ -508,7 +509,7 @@ function completeLevel(){
   resInfo.textContent=`Cristais: ${player.crystals} | Tempo restante: ${formatTime(timeLeft)}`;
   state=State.RESULT;
   screenResult.classList.add('show');
-  if (draw.playerEl) draw.playerEl.style.display='none';
+  
   if (draw.lavaEls) draw.lavaEls.forEach(el => el.style.display='none');
   if (draw.aguaEls) draw.aguaEls.forEach(el => el.style.display='none');
   if (draw.crystalEls) draw.crystalEls.forEach(el => el.style.display='none');
@@ -516,12 +517,14 @@ function completeLevel(){
 
 /** Derrota */
 function failLevel(reason='Tempo esgotado!'){
+   if (draw.playerEl) draw.playerEl.style.display='none';
   cancelAnimationFrame(frameId);
+  
   resTitle.textContent='Derrota';
   resInfo.textContent=reason;
   state=State.RESULT;
   screenResult.classList.add('show');
-  if (draw.playerEl) draw.playerEl.style.display='none';
+ 
   if (draw.lavaEls) draw.lavaEls.forEach(el => el.style.display='none');
   if (draw.aguaEls) draw.aguaEls.forEach(el => el.style.display='none');
   if (draw.crystalEls) draw.crystalEls.forEach(el => el.style.display='none');
@@ -855,7 +858,8 @@ for (let i = 0; i < L.liquids.length; i++) {
     img.style.top = `${ly}px`;
     img.style.width = `${liq.w * sx}px`;
     img.style.height = `${liq.h * sy}px`;
-    img.style.display = (state === State.GAME) ? '' : 'none';
+    img.style.display = (state === State.GAME || state === State.RESULT) ? '' : 'none';
+
   }
 
   // água animada (aguaGif)
@@ -868,7 +872,8 @@ for (let i = 0; i < L.liquids.length; i++) {
     img.style.top = `${ly}px`;
     img.style.width = `${liq.w * sx}px`;
     img.style.height = `${liq.h * sy}px`;
-    img.style.display = (state === State.GAME) ? '' : 'none';
+    img.style.display = (state === State.GAME || state === State.RESULT) ? '' : 'none';
+
   }
 
   // água estática (ex: agua1.png)
@@ -881,7 +886,8 @@ for (let i = 0; i < L.liquids.length; i++) {
     img.style.top = `${ly}px`;
     img.style.width = `${liq.w * sx}px`;
     img.style.height = `${liq.h * sy}px`;
-    img.style.display = (state === State.GAME) ? '' : 'none';
+    img.style.display = (state === State.GAME || state === State.RESULT) ? '' : 'none';
+
   }
 
   // líquidos simples (cores sólidas)
@@ -950,7 +956,7 @@ if (goingLeft) {
     draw.lastDirection = 'left';
     // Se já está andando, troca o GIF imediatamente
     if (draw.playerAnimating) {
-      draw.playerEl.src = 'bonequinesquerda.gif';
+      draw.playerEl.src = 'Bonequinesquerda.gif';
     }
   }
 } else if (goingRight) {
@@ -1042,7 +1048,7 @@ if (interacting) {
   draw.playerEl.style.top  = `${vy}px`;
   draw.playerEl.style.width  = `${vw}px`;
   draw.playerEl.style.height = `${vh}px`;
-  draw.playerEl.style.display = '';
+  draw.playerEl.style.display = (state === State.GAME) ? '' : 'none';
 
   // --- HUD/objetos do nível ---
   for (const p of L.plates){ drawRect(p.x,p.y,p.w,p.h, p.pressed?'#01cf38ff':'#ff0000ff', '#1f150f'); }
@@ -1080,7 +1086,8 @@ if (interacting) {
     img.style.top    = `${cy}px`;
     img.style.width  = `${c.w * sx}px`;
     img.style.height = `${c.h * sy}px`;
-    img.style.display = (state===State.GAME) ? '' : 'none';
+    img.style.display = (state === State.GAME || state === State.RESULT) ? '' : 'none';
+
   }
 
   // --- CAIXAS (agora com imagem) ---
