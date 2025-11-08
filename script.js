@@ -1082,8 +1082,27 @@ for (let i = 0; i < L.doors.length; i++) {
     img.style.display = (state===State.GAME) ? '' : 'none';
   }
 
-  // caixas
-  for (const b of L.boxes){ drawRect(b.x,b.y,b.w,b.h,'#8d6e63','#1f150f'); }
+  // --- CAIXAS (agora com imagem) ---
+  if (!draw.boxImgs) {
+    draw.boxImgs = {}; // Usar um objeto para armazenar imagens por nome
+  }
+
+  for (const b of L.boxes) {
+    const imgPath = 'bloco1.png'; // Caminho para a sua imagem
+    if (!draw.boxImgs[imgPath]) {
+      draw.boxImgs[imgPath] = new Image();
+      draw.boxImgs[imgPath].src = imgPath;
+    }
+
+    const img = draw.boxImgs[imgPath];
+    if (img.complete) {
+      ctx.drawImage(img, b.x, b.y, b.w, b.h);
+    } else {
+      // Fallback: desenha um retângulo se a imagem ainda não carregou
+      drawRect(b.x, b.y, b.w, b.h, '#8d6e63', '#1f150f');
+    }
+  }
+ 
 }
 
 let lastTick=0;
