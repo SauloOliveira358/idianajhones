@@ -67,6 +67,20 @@ imgLeverInactive.src = 'alavanca.png';
 
 const imgLeverActive = new Image();
 imgLeverActive.src = 'alavancaacionada.png';
+
+// Variáveis para a mecânica da Fase 3 (Plataformas que somem)
+// Variáveis para a mecânica da Fase 3 (Plataformas que somem)
+const PLATAFORMAS_FASE3 = [1, 2, 4]; // Índices das plataformas afetadas
+const TEMPO_ESCONDIDA = 30000; // 3 segundos (tempo que a plataforma fica invisível)
+const TEMPO_PAUSA_VISIVEL = 3000; // 0.5 segundos (tempo que todas ficam visíveis)
+const CICLO_TOTAL = TEMPO_ESCONDIDA + TEMPO_PAUSA_VISIVEL; // 3500 ms
+// As outras variáveis globais (timerPlataforma3, plataformaAtualFase3, etc.) permanecem as mesmas.
+
+
+let timerPlataforma3 = 0;
+let plataformaAtualFase3 = -1; // Índice da plataforma atualmente escondida
+let posicoesOriginaisFase3 = {}; // Para guardar o estado original das plataformas
+
 // -------------------------
 // Entrada via teclado
 // - Armazena teclas pressionadas
@@ -575,6 +589,20 @@ if (idx === 1) {  // Fase 2 (índice 1)
   if (draw.lavaEls) draw.lavaEls.forEach(el => el.style.display = 'none');
   if (draw.aguaEls) draw.aguaEls.forEach(el => el.style.display = 'none');
   if (draw.crystalEls) draw.crystalEls.forEach(el => el.style.display = 'none');
+
+  // Reset da mecânica da Fase 3
+    timerPlataforma3 = 0;
+    plataformaAtualFase3 = -1;
+    posicoesOriginaisFase3 = {}; // Limpa o cache de posições
+    
+    // Se for a Fase 3, armazena as posições originais
+    if (currentLevelIndex === 2) {
+        const L = levels[currentLevelIndex];
+        for (const index of PLATAFORMAS_FASE3) {
+            const plat = L.platforms[index];
+            posicoesOriginaisFase3[index] = { x: plat.x, y: plat.y, w: plat.w, h: plat.h };
+        }
+    }
 }
 
 
@@ -766,6 +794,66 @@ else if (currentLevelIndex === 1) {
         plat2.y = centerY - plat2.h / 2;
     }
 }
+// --- LÓGICA PARA A FASE 3 (Plataformas que somem) ---
+// --- LÓGICA PARA A FASE 3 (Plataformas que somem) ---
+else if (currentLevelIndex === 2) {
+    const L = levels[currentLevelIndex];
+    timerPlataforma3 -= dt;
+
+    // --- 1. GESTÃO DA TRANSIÇÃO E REAPARECIMENTO ---
+    // Se o timer está na fase de pausa visível (0.5s)
+    if (timerPlataforma3 <= TEMPO_PAUSA_VISIVEL) {
+        
+        // Se uma plataforma estava escondida, REAPARECE ELA AGORA
+        if (plataformaAtualFase3 !== -1) {
+            const index = plataformaAtualFase3;
+            const original = posicoesOriginaisFase3[index];
+            const plat = L.platforms[index];
+            
+            // Restaura a plataforma para sua posição original
+            plat.x = original.x;
+            plat.y = original.y;
+            plat.w = original.w;
+            plat.h = original.h;
+            
+            // **IMPORTANTE:** Não resetamos plataformaAtualFase3 aqui.
+            // Ela guarda o índice da plataforma que acabou de reaparecer.
+        }
+        
+        // Se o timer zerou, é hora de começar um novo ciclo (esconder a próxima)
+        if (timerPlataforma3 <= 0) {
+            
+            // 2. ESCONDER uma nova plataforma aleatória
+            
+            // Guarda o índice da plataforma que acabou de reaparecer
+            const ultimaPlataforma = plataformaAtualFase3; 
+
+            // Filtra a lista de plataformas para excluir a última
+            let plataformasDisponiveis = PLATAFORMAS_FASE3.filter(index => index !== ultimaPlataforma);
+
+            // Se a lista filtrada estiver vazia (o que só acontece se houver apenas 1 plataforma),
+            // usamos a lista completa como fallback.
+            if (plataformasDisponiveis.length === 0) {
+                plataformasDisponiveis = PLATAFORMAS_FASE3;
+            }
+
+            // Escolhe um novo índice aleatório da lista filtrada
+            const novoIndice = plataformasDisponiveis[Math.floor(Math.random() * plataformasDisponiveis.length)];
+
+            // Atualiza a plataforma atual (agora com o novo índice)
+            plataformaAtualFase3 = novoIndice;
+
+            // Esconde a plataforma (definindo largura e altura para 0)
+            const plat = L.platforms[novoIndice];
+            plat.w = 0;
+            plat.h = 0;
+            
+            // 3. REINICIA o timer para o próximo ciclo
+            timerPlataforma3 = CICLO_TOTAL;
+        }
+    }
+}
+
 
 // --- TIMER UNIVERSAL DE REVERSÃO (FORA DOS BLOCOS DE FASE) ---
 if (timerPlataforma > 0) {
