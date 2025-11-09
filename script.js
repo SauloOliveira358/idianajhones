@@ -72,7 +72,7 @@ imgLeverActive.src = 'alavancaacionada.png';
 // Variáveis para a mecânica da Fase 3 (Plataformas que somem)
 const PLATAFORMAS_FASE3 = [1, 2, 3,4]; // Índices das plataformas afetadas
 const TEMPO_ESCONDIDA = 30000; // 3 segundos (tempo que a plataforma fica invisível)
-const TEMPO_PAUSA_VISIVEL = 15000; // 0.5 segundos (tempo que todas ficam visíveis)
+const TEMPO_PAUSA_VISIVEL = 25000; // 0.5 segundos (tempo que todas ficam visíveis)
 const CICLO_TOTAL = TEMPO_ESCONDIDA + TEMPO_PAUSA_VISIVEL; // 3500 ms
 // As outras variáveis globais (timerPlataforma3, plataformaAtualFase3, etc.) permanecem as mesmas.
 
@@ -408,9 +408,9 @@ const levels = [
       {x:120,y:420,w:100,h:16}, //plataforma 1
       {x:310,y:330,w:100,h:16},//plataforma 2
       {x:320,y:150,w:100,h:16}, //plataforma 3
-      {x:510,y:350,w:150,h:16}, //plataforma 4
+      {x:480,y:380,w:150,h:16}, //plataforma 4
       {x:120,y:130,w:100,h:16}, //plataforma 5
-      {x:700,y:290,w:150,h:16}, //plataforma 6  
+      {x:700,y:310,w:150,h:16}, //plataforma 6  
       {x:820,y:430,w:120,h:16},
       // NOVO: Plataforma de suporte fora do canvas
 {id: 'SUPORTE_BLOCO_3', x: 260 - 26, y: -26, w: 52, h: 16} 
@@ -424,7 +424,7 @@ const levels = [
 
     // Lava estática (não animada)
     liquids: [
-      {x:130,y:499,w:800,h:20,type:'lava'},  
+      {x:130,y:499,w:810,h:20,type:'lava'},  
     ],
 
     // Cristais
@@ -442,7 +442,7 @@ const levels = [
 
     // Alavanca que faz parte do mecanismo da porta
     levers: [
-      {id:'L3',x:720,y:270,w:18,h:18,active:false,toggles:['D3']},
+      {id:'L3',x:720,y:290,w:18,h:18,active:false,toggles:['D3']},
       { id: 'L3M', x: 520, y: 220, w: 18, h: 18, active: false, attachedTo: 'M3A' }
 
     ],
@@ -584,11 +584,17 @@ timerPlataforma = 0
 
   levels[idx] = L; // substitui o nível atual por uma nova cópia limpa
 // Ajustar velocidade da caixa conforme a fase
-if (idx === 1) {  // Fase 2 (índice 1)
-  boxPushForce = 3;    // Dobra a velocidade (0.6 * 2)
-} else {
-  boxPushForce = 0.6;    // Velocidade normal
+// Ajustar força de empurrão conforme a fase
+if (idx === 1) {          // Fase 2
+  boxPushForce = 3;       // Mais leve (empurra rápido)
+} 
+else if (idx === 2) {     // Fase 3
+  boxPushForce = 0.1;     // Mais pesado (empurra devagar)
+} 
+else {
+  boxPushForce = 0.6;     // Padrão
 }
+
   triggers = {};
   (L.levers || []).forEach(l => triggers[l.id] = l.active);
   (L.plates || []).forEach(p => triggers[p.id] = p.pressed);
@@ -956,50 +962,59 @@ else if (currentLevelIndex === 2) {
     const L = levels[currentLevelIndex];
     timerPlataforma3 -= dt;
 
+    // --- MOVIMENTO DO BLOCO SOLTO JUNTO COM A PLATAFORMA MÓVEL ---
+    const mover = L.movers.find(m => m.id === 'M3A');
+    const bloco = L.boxes.find(b => b.id === 'BLOCO_SOLTO_3');
+
+    if (mover && bloco) {
+        // Detecta se o bloco está apoiado na plataforma móvel
+        const estaSobre =
+            bloco.y + bloco.h <= mover.y + 4 && // encostado por cima
+            bloco.y + bloco.h >= mover.y - 6 &&
+            bloco.x + bloco.w > mover.x &&
+            bloco.x < mover.x + mover.w;
+
+        if (estaSobre) {
+            // Move o bloco na mesma distância que a plataforma andou
+            bloco.x += (mover.x - (mover.prevX || mover.x));
+            bloco.y = mover.y - bloco.h;
+            bloco.vy = 0;
+            bloco.onGround = true;
+        }
+
+        // Armazena a posição anterior da plataforma
+        mover.prevX = mover.x;
+    }
+
     // --- 1. GESTÃO DA TRANSIÇÃO E REAPARECIMENTO ---
-    // Se o timer está na fase de pausa visível (0.5s)
     if (timerPlataforma3 <= TEMPO_PAUSA_VISIVEL) {
-        
+
         // Se uma plataforma estava escondida, REAPARECE ELA AGORA
         if (plataformaAtualFase3 !== -1) {
             const index = plataformaAtualFase3;
             const original = posicoesOriginaisFase3[index];
             const plat = L.platforms[index];
-            
+
             // Restaura a plataforma para sua posição original
             plat.x = original.x;
             plat.y = original.y;
             plat.w = original.w;
             plat.h = original.h;
-            
-            // **IMPORTANTE:** Não resetamos plataformaAtualFase3 aqui.
-            // Ela guarda o índice da plataforma que acabou de reaparecer.
         }
-        
+
         // Se o timer zerou, é hora de começar um novo ciclo (esconder a próxima)
         if (timerPlataforma3 <= 0) {
-            
             // 2. ESCONDER uma nova plataforma aleatória
-            
-            // Guarda o índice da plataforma que acabou de reaparecer
             const ultimaPlataforma = plataformaAtualFase3; 
-
-            // Filtra a lista de plataformas para excluir a última
             let plataformasDisponiveis = PLATAFORMAS_FASE3.filter(index => index !== ultimaPlataforma);
 
-            // Se a lista filtrada estiver vazia (o que só acontece se houver apenas 1 plataforma),
-            // usamos a lista completa como fallback.
             if (plataformasDisponiveis.length === 0) {
                 plataformasDisponiveis = PLATAFORMAS_FASE3;
             }
 
-            // Escolhe um novo índice aleatório da lista filtrada
             const novoIndice = plataformasDisponiveis[Math.floor(Math.random() * plataformasDisponiveis.length)];
-
-            // Atualiza a plataforma atual (agora com o novo índice)
             plataformaAtualFase3 = novoIndice;
 
-            // Esconde a plataforma (definindo largura e altura para 0)
             const plat = L.platforms[novoIndice];
             plat.w = 0;
             plat.h = 0;
@@ -1009,6 +1024,7 @@ else if (currentLevelIndex === 2) {
         }
     }
 }
+
 
 
 // --- TIMER UNIVERSAL DE REVERSÃO (FORA DOS BLOCOS DE FASE) ---
