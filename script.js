@@ -72,7 +72,7 @@ imgLeverActive.src = 'alavancaacionada.png';
 // Variáveis para a mecânica da Fase 3 (Plataformas que somem)
 const PLATAFORMAS_FASE3 = [1, 2, 4]; // Índices das plataformas afetadas
 const TEMPO_ESCONDIDA = 30000; // 3 segundos (tempo que a plataforma fica invisível)
-const TEMPO_PAUSA_VISIVEL = 3000; // 0.5 segundos (tempo que todas ficam visíveis)
+const TEMPO_PAUSA_VISIVEL = 12000; // 0.5 segundos (tempo que todas ficam visíveis)
 const CICLO_TOTAL = TEMPO_ESCONDIDA + TEMPO_PAUSA_VISIVEL; // 3500 ms
 // As outras variáveis globais (timerPlataforma3, plataformaAtualFase3, etc.) permanecem as mesmas.
 
@@ -1143,11 +1143,30 @@ function draw(){
       ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
     }
 
+   } else if (currentLevelIndex === 2) {
+    // fundo (vídeo no nível 3)
+    if (!draw.bgVideo3) {
+      draw.bgVideo3 = document.createElement('video');
+      draw.bgVideo3.src = 'fundocristal.mp4'; // Nome do arquivo de vídeo
+      draw.bgVideo3.loop = true;
+      draw.bgVideo3.muted = true;
+      draw.bgVideo3.play();
+    }
+    try {
+      ctx.drawImage(draw.bgVideo3, 0, 0, W, H);
+    } catch (e) {
+      // Fallback para gradiente se o vídeo não carregar
+      const g=ctx.createLinearGradient(0,0,0,H);
+      g.addColorStop(0,'#2b221b'); g.addColorStop(1,'#100d0c');
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    }
   } else {
+    // fundo padrão para as demais fases (4 e 5)
     const g=ctx.createLinearGradient(0,0,0,H);
     g.addColorStop(0,'#2b221b'); g.addColorStop(1,'#100d0c');
     ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
   }
+
 
 
 for (const p of L.platforms) {
