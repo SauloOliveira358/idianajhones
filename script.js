@@ -354,7 +354,7 @@ const levels = [
 
   // Plataformas
   platforms: [
-    {x:0,y:500,w:960,h:40},           // Plataforma 0: Chão (NÃO MUDA)
+    {x:0,y:500,w:960,h:40,img:'chaolava.png'},    // Chão principal (ocupa toda a base)
     {x:80,y:420,w:140,h:16},          // Plataforma 1: Primeira plataforma normal
     {x:280,y:340,w:140,h:16},         // Plataforma 2: Segunda plataforma
     {x:420,y:240,w:140,h:16},         // Plataforma 3: A mais alta, no meio
@@ -1141,10 +1141,39 @@ r._px = r.x; r._py = r.y;
     for (const r of [...L.platforms, ...L.movers]) collideRects(b, r);
 
     b.y += b.vy;
-    for (const r of [...L.platforms, ...L.movers]) {
-      const side = collideRects(b, r);
-      if (side === 'top') { b.vy = 0; }
-    }
+   // 🔧 Ajuste global de hitbox do personagem
+const marginX = 4; // margem lateral — 4px de cada lado (ajuste se quiser)
+const playerHitbox = {
+  x: player.x + marginX,
+  y: player.y,
+  w: player.w - marginX * 2,
+  h: player.h
+};
+
+// Colide com tudo: plataformas, blocos, lava, água, etc.
+for (const r of [
+  ...L.platforms,
+  ...L.movers,
+  ...(L.blocks || []),
+  ...(L.lava || []),
+  ...(L.water || []),
+]) {
+  const side = collideRects(playerHitbox, r);
+  if (!side) continue;
+
+  if (side === 'top') {
+    player.onGround = true;
+    player.vy = 0;
+    player.y = r.y - player.h;
+  } else if (side === 'bottom') {
+    player.vy = 0;
+  } else if (side === 'left') {
+    player.vx = Math.max(player.vx, 0);
+  } else if (side === 'right') {
+    player.vx = Math.min(player.vx, 0);
+  }
+}
+
 
     // limitações nas bordas do canvas
     if (b.x < 0) { b.x = 0; b.vx = 0; }
@@ -1342,7 +1371,13 @@ function draw(){
 
 
 for (const p of L.platforms) {
-  if (!p.img) p.img = 'plataforma.png';   // todas plataformas têm imagem padrão
+  if (!p.img) {
+    if (currentLevelIndex === 1) {
+      p.img = 'PlataformaLava.png'; // Imagem para a Fase 2
+    } else {
+      p.img = 'plataforma.png'; // Imagem padrão para outras fases
+    }
+  } // todas plataformas têm imagem padrão
   if (p.img) {
     if (!p._imgEl) {
       p._imgEl = new Image();
