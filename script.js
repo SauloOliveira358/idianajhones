@@ -32,7 +32,7 @@ const btnResultMap = document.getElementById('btnResultMap');
 const btnResultRetry = document.getElementById('btnResultRetry');
 const resTitle = document.getElementById('resTitle');
 const resInfo = document.getElementById('resInfo');
-
+let alavanca = false;
 const mapCanvas = document.getElementById('map');
 const mapCtx = mapCanvas.getContext('2d');
 
@@ -48,7 +48,12 @@ let burningBoxes = new Map(); // Map<box, {timer: number, particlesActive: boole
 // Estados de tela do jogo
 // -------------------------
 const State = { MENU:0, MAP:1, GAME:2, RESULT:3 };
-let state = State.MENU;                 // estado atual
+let state = State.MENU; 
+// Adicione estas linhas perto de onde você declarou 'let state = State.MENU;'
+
+let alavancaArmada = false;  // TRUE quando a alavanca da Fase 2 for acionada
+let plataformaGirou = false; // TRUE quando a plataforma efetivamente girar
+                // estado atual
 let currentLevelIndex = -1;             // índice da fase ativa
 let progress = { unlocked: 5, completed: [] }; // progresso (fases liberadas/concluídas)
 
@@ -314,7 +319,7 @@ const levels = [
   // Plataformas
   platforms: [
     {x:0,y:500,w:960,h:40},           // Plataforma 0: Chão (NÃO MUDA)
-    {x:80,y:430,w:140,h:16},          // Plataforma 1: Primeira plataforma normal
+    {x:80,y:420,w:140,h:16},          // Plataforma 1: Primeira plataforma normal
     {x:280,y:340,w:140,h:16},         // Plataforma 2: Segunda plataforma
     {x:420,y:240,w:140,h:16},         // Plataforma 3: A mais alta, no meio
     {x:620,y:360,w:140,h:16}          // Plataforma 4: Depois da 3, mais baixa
@@ -516,7 +521,10 @@ const player={x:0,y:0,w:24,h:32,vx:0,vy:0,onGround:false,crystals:0,alive:true};
  */
 function startLevel(idx) {
   currentLevelIndex = idx;
+  alavancaArmada = false;
+  plataformaGirou = false;
 eventoJaOcorreu = false; 
+
 tempoRetorno = 10000
 timerPlataforma = 0
   // 🧱 Faz uma cópia profunda do nível para resetar tudo
@@ -569,6 +577,7 @@ if (idx === 1) {  // Fase 2 (índice 1)
 /** Reinicia a fase atual corretamente */
 function restartLevel() {
   // 🧹 Esconde tela de morte, se existir
+  alavanca = false;
   const deathScreen = document.getElementById('deathScreen');
   if (deathScreen) deathScreen.style.display = 'none';
 
@@ -695,53 +704,110 @@ function update(dt){
     // --- DETECTA SAÍDA DA PLATAFORMA 2 PARA A DIREITA ---
 // >>> INÍCIO DO NOVO CÓDIGO <<<
 
-// Garantimos que estamos usando as plataformas corretas na fase
-// --- DETECTA SAÍDA DA PLATAFORMA 2 PARA A DIREITA ---
-// plat2 é L.platforms[1], plat3 é L.platforms[2]
+// >>> INÍCIO DO CÓDIGO CORRIGIDO E UNIFICADO <<<
+
+// --- LÓGICA PARA A FASE 1 ---
 if (currentLevelIndex === 0) {
-const plat2 = L.platforms[2];
-const plat3 = L.platforms[3];
+    const L = levels[currentLevelIndex];
+    const plat2 = L.platforms[2];
+    const plat3 = L.platforms[3];
 
-// Verifica se jogador passou COMPLETAMENTE pela borda direita de plat2
-// usamos player.x + player.w (borda direita do jogador)
-if (!eventoJaOcorreu && (player.x + player.w) > (plat2.x + plat2.w) && player.vx > 0) {
-  // guarda o centro atual de plat3
-  const centerX = plat3.x + plat3.w / 2;
-  const centerY = plat3.y + plat3.h / 2;
+    // Verifica se o jogador cruzou a plat2 e se o evento ainda não ocorreu
+    // Usamos 'plataformaGirou' para consistência
+    if (!plataformaGirou && (player.x + player.w) > (plat2.x + plat2.w) && player.vx > 0) {
+        plataformaGirou = true; // Marca que o evento aconteceu
+        timerPlataforma = tempoRetorno;
 
-  // troca largura/altura mantendo o centro no mesmo lugar
-  const newW = plat3.h;
-  const newH = plat3.w;
-  plat3.w = newW;
-  plat3.h = newH;
-  // recalcula x,y para manter o centro igual
-  plat3.x = centerX - plat3.w / 2;
-  plat3.y = centerY - plat3.h / 2;
-
-  eventoJaOcorreu = true;
-  timerPlataforma = tempoRetorno; // inicia contagem (tempo em ms)
+        // Lógica de rotação para a plat3
+        const centerX = plat3.x + plat3.w / 2;
+        const centerY = plat3.y + plat3.h / 2;
+        const newW = plat3.h;
+        const newH = plat3.w;
+        plat3.w = newW;
+        plat3.h = newH;
+        plat3.x = centerX - plat3.w / 2;
+        plat3.y = centerY - plat3.h / 2;
+    }
 }
-// --- TIMER DA PLATAFORMA (reversão) ---
+// --- LÓGICA PARA A FASE 2 ---
+else if (currentLevelIndex === 1) {
+    const L = levels[currentLevelIndex];
+    const plat1 = L.platforms[1];
+    const plat2 = L.platforms[2];
+
+    // 1. "Arma" a mecânica quando a alavanca é acionada
+    if (!alavancaArmada) {
+        const alavancaFase2 = L.levers.find(l => l.id === 'L1');
+        if (alavancaFase2 && alavancaFase2.active) {
+            alavancaArmada = true;
+        }
+    }
+
+    // 2. Dispara o evento ao entrar na "zona de ativação"
+    const zonaDeAtivacao = { x: plat1.x + plat1.w, w: plat2.x - (plat1.x + plat1.w) };
+    const jogadorNaZona = (player.x + player.w > zonaDeAtivacao.x) && (player.x < zonaDeAtivacao.x + zonaDeAtivacao.w);
+
+    if (alavancaArmada && !plataformaGirou && player.vx > 0 && jogadorNaZona) {
+        plataformaGirou = true;
+        timerPlataforma = tempoRetorno;
+
+        // Lógica de rotação para a plat2
+        const centerX = plat2.x + plat2.w / 2;
+        const centerY = plat2.y + plat2.h / 2;
+        const newW = plat2.h;
+        const newH = plat2.w;
+        plat2.w = newW;
+        plat2.h = newH;
+        plat2.x = centerX - plat2.w / 2;
+        plat2.y = centerY - plat2.h / 2;
+    }
+}
+
+// --- TIMER UNIVERSAL DE REVERSÃO (FORA DOS BLOCOS DE FASE) ---
 if (timerPlataforma > 0) {
-  timerPlataforma -= dt;
-  if (timerPlataforma <= 0 && eventoJaOcorreu) {
-    // volta ao normal: troca w/h novamente mantendo o centro
-    const centerX = plat3.x + plat3.w / 2;
-    const centerY = plat3.y + plat3.h / 2;
+    timerPlataforma -= dt;
 
-    const newW = plat3.h; // swap de volta
-    const newH = plat3.w;
-    plat3.w = newW;
-    plat3.h = newH;
-    plat3.x = centerX - plat3.w / 2;
-    plat3.y = centerY - plat3.h / 2;
+    if (timerPlataforma <= 0) {
+        // Só reverta se uma plataforma de fato girou
+        if (plataformaGirou) {
+            const L = levels[currentLevelIndex];
+            let platParaReverter = null;
 
-    // reseta para permitir novo evento futuramente
-    
-    timerPlataforma = 0;
-  }
+            // Decide qual plataforma reverter com base na fase
+            if (currentLevelIndex === 0) {
+                platParaReverter = L.platforms[3];
+            } else if (currentLevelIndex === 1) {
+                platParaReverter = L.platforms[2];
+            }
+
+            // Se encontramos uma plataforma, reverta-a
+            if (platParaReverter) {
+                const centerX = platParaReverter.x + platParaReverter.w / 2;
+                const centerY = platParaReverter.y + platParaReverter.h / 2;
+                const newW = platParaReverter.h;
+                const newH = platParaReverter.w;
+                platParaReverter.w = newW;
+                platParaReverter.h = newH;
+                platParaReverter.x = centerX - platParaReverter.w / 2;
+                platParaReverter.y = centerY - platParaReverter.h / 2;
+            }
+        }
+        // Zera o timer e reseta o estado para a próxima tentativa (se necessário)
+        timerPlataforma = 0;
+        // Se você quiser que o evento possa acontecer de novo na mesma vida,
+        // você resetaria `plataformaGirou = false;` aqui.
+        // Mas é melhor resetar apenas no `startLevel`.
+    }
 }
-}
+
+// >>> FIM DO CÓDIGO CORRIGIDO E UNIFICADO <<<
+
+
+// O código do Timer de Reversão pode continuar o mesmo que na versão anterior.
+
+// >>> FIM DO CÓDIGO FINAL <<<
+
+
 // colisões normais ...
 const side = collideRects(player, r);
 if (side === 'top') {
@@ -936,6 +1002,7 @@ function updateDoors(){
       if(!triggers[req]){ ok=false; break; }
     }
     d.open=ok;
+    alavanca= true;
   }
 }
 
