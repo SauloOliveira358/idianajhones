@@ -325,15 +325,15 @@ const levels = [
   // Lava (só muda eixo X, Y permanece 499)
   liquids: [
     {x:270,y:499,w:120,h:20,type:'lava'},   // Lava 1
-    {x:600,y:499,w:150,h:20,type:'lava'}   // Lava 2
+    {x:600,y:499,w:350,h:20,type:'lava'}   // Lava 2
        // Lava 3
   ],
 
   // Cristais
   crystals: [
-    {x:310,y:350,w:20,h:20},          // Cristal 1: Perto da plataforma 2
-    {x:450,y:250,w:20,h:20},          // Cristal 2: Perto da plataforma 3 (a mais alta)
-    {x:650,y:330,w:20,h:20}           // Cristal 3: Perto da plataforma 4
+    {x:320,y:350,w:42,h:42},          // Cristal 1: Perto da plataforma 2
+    {x:450,y:100,w:42,h:42},          // Cristal 2: Perto da plataforma 3 (a mais alta)
+    {x:790,y:200,w:42,h:42}           // Cristal 3: Perto da plataforma 4
   ],
 
   // Porta no meio, em cima da plataforma 3
@@ -347,9 +347,7 @@ const levels = [
   ],
 
   // Placa de pressão na plataforma 1
-  plates: [
-    {id:'P2',x:100,y:426,w:40,h:8,pressed:false,opens:['D2']}
-  ],
+  plates: [],
 
   // Caixa empurrável
   boxes: [
@@ -853,7 +851,19 @@ r._px = r.x; r._py = r.y;
         p.pressed = true;
       }
     }
-  // ===== ATUALIZA CAIXAS EM CHAMAS =====
+  
+  
+  // Atualiza partículas de fogo
+  updateFireParticles(dt);
+
+    // Apenas atualiza as portas se o estado da placa mudou (de pressionada para não pressionada, ou vice-versa)
+    if (prev !== p.pressed) {
+
+      triggers[p.id]=p.pressed;
+      updateDoors();
+    }
+  }
+// ===== ATUALIZA CAIXAS EM CHAMAS =====
   for (const [box, data] of burningBoxes.entries()) {
     if (data.particlesActive) {
       // Cria partículas de fogo na posição da caixa
@@ -873,18 +883,7 @@ r._px = r.x; r._py = r.y;
       }
     }
   }
-  
-  // Atualiza partículas de fogo
-  updateFireParticles(dt);
-
-    // Apenas atualiza as portas se o estado da placa mudou (de pressionada para não pressionada, ou vice-versa)
-    if (prev !== p.pressed) {
-
-      triggers[p.id]=p.pressed;
-      updateDoors();
-    }
-  }
-
+updateFireParticles(dt);
 
   for (const liq of L.liquids){
     if (aabb(player, liq)){
@@ -1321,12 +1320,15 @@ let lastTick=0;
 function loop(ts){
   const dt=Math.min(50, ts-(lastTick||ts));
   lastTick=ts;
-  update(dt);
+  if(state===State.GAME) { // Apenas atualiza a lógica do jogo no estado GAME
+    update(dt);
+  }
   draw();
-  // Voltando ao original para congelar as telas de vitória/derrota
-if(state===State.GAME) frameId=requestAnimationFrame(loop);
-
+  // O loop só continua se estiver no estado GAME. Se estiver em RESULT, ele para.
+  if(state===State.GAME) frameId=requestAnimationFrame(loop); 
 }
+
+
 
 btnRestart.addEventListener('click', restartLevel);
 showMenu();
