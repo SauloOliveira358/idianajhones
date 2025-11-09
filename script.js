@@ -70,9 +70,9 @@ imgLeverActive.src = 'alavancaacionada.png';
 
 // Variáveis para a mecânica da Fase 3 (Plataformas que somem)
 // Variáveis para a mecânica da Fase 3 (Plataformas que somem)
-const PLATAFORMAS_FASE3 = [1, 2, 4]; // Índices das plataformas afetadas
+const PLATAFORMAS_FASE3 = [1, 2, 3]; // Índices das plataformas afetadas
 const TEMPO_ESCONDIDA = 30000; // 3 segundos (tempo que a plataforma fica invisível)
-const TEMPO_PAUSA_VISIVEL = 12000; // 0.5 segundos (tempo que todas ficam visíveis)
+const TEMPO_PAUSA_VISIVEL = 15000; // 0.5 segundos (tempo que todas ficam visíveis)
 const CICLO_TOTAL = TEMPO_ESCONDIDA + TEMPO_PAUSA_VISIVEL; // 3500 ms
 // As outras variáveis globais (timerPlataforma3, plataformaAtualFase3, etc.) permanecem as mesmas.
 
@@ -80,6 +80,7 @@ const CICLO_TOTAL = TEMPO_ESCONDIDA + TEMPO_PAUSA_VISIVEL; // 3500 ms
 let timerPlataforma3 = 0;
 let plataformaAtualFase3 = -1; // Índice da plataforma atualmente escondida
 let posicoesOriginaisFase3 = {}; // Para guardar o estado original das plataformas
+let controllingMover = null; // guarda a plataforma sendo controlada
 
 // -------------------------
 // Entrada via teclado
@@ -88,12 +89,33 @@ let posicoesOriginaisFase3 = {}; // Para guardar o estado original das plataform
 // - E para usar alavanca
 // - R para reiniciar fase
 // -------------------------
-window.addEventListener('keydown', (e)=>{
+let playerOnMover = false;
+
+window.addEventListener('keydown', (e) => {
   key[e.code] = true;
+
   if (e.code === 'Escape') gotoMap();
-  if (e.code === 'KeyE') useLever();
+  if (e.code === 'KeyE') {
+    const L = levels[currentLevelIndex];
+
+    // Se estiver sobre a plataforma móvel, alterna entre "grudar" e "soltar"
+    if (currentLevelIndex === 2) {
+      const mover = L.movers.find(m => m.id === 'M3A');
+      if (mover && aabb(player, {x: mover.x, y: mover.y - 4, w: mover.w, h: mover.h + 6})) {
+        playerOnMover = !playerOnMover;
+        if (playerOnMover) {
+          player.vx = 0; player.vy = 0;
+          player.onGround = true;
+        }
+      }
+    }
+
+    useLever(); // mantém função original
+  }
+
   if (e.code === 'KeyR') restartLevel();
 });
+
 window.addEventListener('keyup', (e)=> key[e.code] = false);
 
 // -------------------------
@@ -385,7 +407,6 @@ const levels = [
       {x:0,y:500,w:960,h:40},
       {x:120,y:420,w:100,h:16}, //plataforma 1
       {x:310,y:330,w:100,h:16},//plataforma 2
-      {x:500,y:240,w:100,h:16}, //plataforma 3
       {x:320,y:150,w:100,h:16}, //plataforma 4
       {x:120,y:130,w:100,h:16}, //plataforma 5
       {x:700,y:290,w:150,h:16}, //plataforma 6
@@ -393,7 +414,10 @@ const levels = [
       {x:820,y:430,w:120,h:16}
     ],
 
-    movers: [], // Sem móveis
+    movers: [
+  { id: 'M3A', x: 500, y: 240, w: 100, h: 16, speed: 2, dir: 1, active: false }
+],
+
 
     // Lava estática (não animada)
     liquids: [
@@ -415,7 +439,9 @@ const levels = [
 
     // Alavanca que faz parte do mecanismo da porta
     levers: [
-      {id:'L3',x:720,y:270,w:18,h:18,active:false,toggles:['D3']}
+      {id:'L3',x:720,y:270,w:18,h:18,active:false,toggles:['D3']},
+      { id: 'L3M', x: 520, y: 220, w: 18, h: 18, active: false, attachedTo: 'M3A' }
+
     ],
 
     // Placa de chão que também abre a porta
@@ -609,6 +635,7 @@ if (idx === 1) {  // Fase 2 (índice 1)
 /** Reinicia a fase atual corretamente */
 function restartLevel() {
   // 🧹 Esconde tela de morte, se existir
+   controllingMover = null;
   alavanca = false;
   const deathScreen = document.getElementById('deathScreen');
   if (deathScreen) deathScreen.style.display = 'none';
@@ -685,17 +712,50 @@ function collideRects(a,r){
 }
 
 /** Alavancas */
-function useLever(){
-  if (state!==State.GAME) return;
-  const L=levels[currentLevelIndex];
-  for(const lever of L.levers){
-    if(aabb(player,lever)){
-      lever.active=!lever.active;
-      triggers[lever.id]=lever.active;
+function useLever() {
+  if (state !== State.GAME) return false;
+  const L = levels[currentLevelIndex];
+
+  // 🔹 Se o jogador já está controlando a plataforma (fase 3),
+  // apertar 'E' novamente faz ele sair, mesmo sem estar tocando a alavanca.
+  if (currentLevelIndex === 2 && controllingMover) {
+    controllingMover = null;
+    player.onGround = true;
+    player.vx = 0;
+    player.vy = 0;
+    return true;
+  }
+
+  // 🔹 Caso normal — procurar alavancas e acionar
+  for (const lever of L.levers) {
+    if (aabb(player, lever)) {
+      lever.active = !lever.active;
+      triggers[lever.id] = lever.active;
+
+      // 🔸 Fase 3 — entrar no modo de controle
+      if (currentLevelIndex === 2 && lever.id === 'L3M') {
+        const mover = L.movers.find(m => m.id === 'M3A');
+        if (mover) {
+          controllingMover = mover;
+          mover.active = false;
+          player.vx = 0;
+          player.vy = 0;
+          player.x = mover.x + mover.w / 2 - player.w / 2;
+          player.y = mover.y - player.h;
+          player.onGround = true;
+        }
+      }
+
       updateDoors();
+      return true;
     }
   }
+
+  return false;
 }
+
+
+
 
 /**
  * update(dt)
@@ -707,25 +767,65 @@ function update(dt){
   if (timeLeft<=0) return failLevel('Tempo esgotado!');
   hudTimer.textContent='⏱ '+formatTime(timeLeft);
 
-  const left=key['ArrowLeft']||key['KeyA'], right=key['ArrowRight']||key['KeyD'], jumpKey=key['ArrowUp']||key['Space']||key['KeyW'];
-  if(left) player.vx-=0.9;
-  if(right) player.vx+=0.9;
-  player.vx*=FRICTION;
-  player.vx=clamp(player.vx,-4.2,4.2);
+  const left = key['ArrowLeft'] || key['KeyA'];
+const right = key['ArrowRight'] || key['KeyD'];
+const jumpKey = key['ArrowUp'] || key['Space'] || key['KeyW'];
 
-  player.vy+=GRAV;
-  player.vy=clamp(player.vy,-999,MAX_FALL);
+if (controllingMover) {
+  // 🔹 Controlando a plataforma
+  const mover = controllingMover;
 
-  if(jumpKey && player.onGround){
-    player.vy=-12.5;
-    player.onGround=false;
+  if (left) mover.x -= mover.speed * (dt / 16);
+  if (right) mover.x += mover.speed * (dt / 16);
+
+  // mantém o jogador em cima da plataforma
+  player.vx = 0;
+  player.vy = 0;
+  player.x = mover.x + mover.w / 2 - player.w / 2;
+  player.y = mover.y - player.h;
+  player.onGround = true;
+
+} else {
+  // 🔹 Controle normal do jogador
+  if (left) player.vx -= 0.9;
+  if (right) player.vx += 0.9;
+  player.vx *= FRICTION;
+  player.vx = clamp(player.vx, -4.2, 4.2);
+
+  player.vy += GRAV;
+  player.vy = clamp(player.vy, -999, MAX_FALL);
+
+  if (jumpKey && player.onGround) {
+    player.vy = -12.5;
+    player.onGround = false;
   }
+}
 
-  for (const m of L.movers){
-    m.t += m.speed*(dt/16);
-    const u=0.5-0.5*Math.cos((m.t % (Math.PI*2)));
-    m.x=m.ax+(m.bx-m.ax)*u; m.y=m.ay+(m.by-m.ay)*u;
+
+//movers pra fazer andar
+for (const m of L.movers) {
+  if (!m.active) continue;
+  m.t += m.speed * (dt / 16);
+  const u = 0.5 - 0.5 * Math.cos((m.t % (Math.PI * 2)));
+  m.x = m.ax + (m.bx - m.ax) * u;
+  m.y = m.ay + (m.by - m.ay) * u;
+}
+
+
+// 🔹 Faz alavancas grudadas se moverem junto
+for (const lever of L.levers) {
+  if (lever.attachedTo) {
+    const mover = L.movers.find(m => m.id === lever.attachedTo);
+    if (mover) {
+      lever.x = mover.x + 20;
+      lever.y = mover.y - 20;
+    }
   }
+}
+
+
+
+
 
   player.x += player.vx;
   for (const r of [...L.platforms, ...L.movers]) collideRects(player,r);
