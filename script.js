@@ -369,10 +369,13 @@ const levels = [
     // Plataformas
     platforms: [
       {x:0,y:500,w:960,h:40},
-      {x:120,y:440,w:160,h:16},
-      {x:340,y:390,w:120,h:16},
-      {x:520,y:340,w:120,h:16},
-      {x:700,y:290,w:150,h:16},
+      {x:120,y:420,w:100,h:16}, //plataforma 1
+      {x:310,y:330,w:100,h:16},//plataforma 2
+      {x:500,y:240,w:100,h:16}, //plataforma 3
+      {x:320,y:150,w:100,h:16}, //plataforma 4
+      {x:120,y:130,w:100,h:16}, //plataforma 5
+      {x:700,y:290,w:150,h:16}, //plataforma 6
+      
       {x:820,y:430,w:120,h:16}
     ],
 
@@ -380,19 +383,20 @@ const levels = [
 
     // Lava estática (não animada)
     liquids: [
-      {x:410,y:486,w:140,h:14,type:'lava'}
+      {x:130,y:499,w:800,h:20,type:'lava'},  
     ],
 
     // Cristais
     crystals: [
-      {x:360,y:360,w:20,h:20},
-      {x:540,y:310,w:20,h:20},
-      {x:730,y:260,w:20,h:20}
+      {x:0,y:0,w:42,h:42},
+      {x:900,y:90,w:42,h:42},
+      {x:530,y:200,w:42,h:42}
     ],
 
     // Porta que precisa de uma alavanca e uma placa
+    
     doors: [
-      {id:'D3',x:900,y:360,w:36,h:70,open:false,requires:['P3','L3']}
+      {id:'D3',x:150,y:62,w:36,h:70,open:false,requires:['P3','L3']}
     ],
 
     // Alavanca que faz parte do mecanismo da porta
@@ -402,12 +406,12 @@ const levels = [
 
     // Placa de chão que também abre a porta
     plates: [
-      {id:'P3',x:820,y:426,w:40,h:6,pressed:false,opens:['D3']}
+      {id:'P3',x:850,y:424,w:40,h:8,pressed:false,opens:['D3']}
     ],
 
     // Uma caixa que pode ser usada para ativar a placa
     boxes: [
-      {x:770,y:410,w:26,h:26,vx:0,vy:0}
+      {x:150,y:60,w:26,h:26,vx:0,vy:0}
     ]
   },
 
@@ -419,11 +423,11 @@ const levels = [
 
     platforms: [
       {x:0,y:500,w:960,h:40},
-      {x:140,y:420,w:160,h:16},
-      {x:340,y:360,w:140,h:16},
-      {x:540,y:300,w:140,h:16},
-      {x:740,y:240,w:140,h:16},
-      {x:850,y:430,w:90,h:16}
+      {x:140,y:420,w:160,h:16}, // plataforma 1
+      {x:340,y:360,w:140,h:16},  // plataforma 2
+      {x:540,y:300,w:140,h:16},  // plataforma 3
+      {x:740,y:240,w:140,h:16}, // plataforma 4
+      {x:850,y:430,w:90,h:16}   // plataforma 5
     ],
 
     movers: [], // Nenhum móvel
