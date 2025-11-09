@@ -410,9 +410,11 @@ const levels = [
       {x:320,y:150,w:100,h:16}, //plataforma 3
       {x:510,y:350,w:150,h:16}, //plataforma 4
       {x:120,y:130,w:100,h:16}, //plataforma 5
-      {x:700,y:290,w:150,h:16}, //plataforma 6
-      
-      {x:820,y:430,w:120,h:16}
+      {x:700,y:290,w:150,h:16}, //plataforma 6  
+      {x:820,y:430,w:120,h:16},
+      // NOVO: Plataforma de suporte fora do canvas
+{id: 'SUPORTE_BLOCO_3', x: 260 - 26, y: -26, w: 52, h: 16} 
+
     ],
 
     movers: [
@@ -451,9 +453,13 @@ const levels = [
     ],
 
     // Uma caixa que pode ser usada para ativar a placa
-    boxes: [
-      {x:150,y:60,w:26,h:26,vx:0,vy:0}
-    ]
+  // Uma caixa que pode ser usada para ativar a placa
+boxes: [
+  // NOVO BLOCO: Posicionado em cima da plataforma de suporte
+{id: 'BLOCO_SOLTO_3', x: 260, y:-35, w: 26, h: 26, vx: 0, vy: 0, img: 'bloco6.png'}
+
+]
+
   },
 
   // ===== FASE 4 =====
@@ -630,6 +636,10 @@ if (idx === 1) {  // Fase 2 (índice 1)
             posicoesOriginaisFase3[index] = { x: plat.x, y: plat.y, w: plat.w, h: plat.h };
         }
     }
+      
+
+
+
 }
 
 
@@ -725,13 +735,24 @@ function useLever() {
     player.vx = 0;
     player.vy = 0;
     return true;
+    
   }
 
   // 🔹 Caso normal — procurar alavancas e acionar
   for (const lever of L.levers) {
     if (aabb(player, lever)) {
-      lever.active = !lever.active;
+      
+    lever.active = !lever.active;
       triggers[lever.id] = lever.active;
+
+      // 🔸 Fase 3 — soltar o bloco ao acionar a alavanca L3
+      if (currentLevelIndex === 2 && lever.id === 'L3' && lever.active) {
+        const suporteIndex = L.platforms.findIndex(p => p.id === 'SUPORTE_BLOCO_3');
+        if (suporteIndex !== -1) {
+          L.platforms.splice(suporteIndex, 1);
+          console.log('🧱 Plataforma de suporte removida (Fase 3)');
+        }
+      }
 
       // 🔸 Fase 3 — entrar no modo de controle
       if (currentLevelIndex === 2 && lever.id === 'L3M') {
@@ -746,6 +767,20 @@ function useLever() {
           player.onGround = true;
         }
       }
+    
+  
+
+if (currentLevelIndex === 2 && lever.id === 'L3' && lever.active && !wasActive) {
+  // Encontra a plataforma de suporte
+  const suporteIndex = L.platforms.findIndex(p => p.id === 'SUPORTE_BLOCO_3');
+  
+  // Se a plataforma de suporte existir, remove-a
+  if (suporteIndex !== -1) {
+    L.platforms.splice(suporteIndex, 1);
+  }
+}
+
+
 
       updateDoors();
       return true;
@@ -1100,9 +1135,9 @@ r._px = r.x; r._py = r.y;
     if (b.x + b.w > W) { b.x = W - b.w; b.vx = 0; }
     if (b.y + b.h > H) { b.y = H - b.h; b.vy = 0; }
       // ===== NOVO: DETECÇÃO DE COLISÃO CAIXA-LAVA (FASE 2) =====
-    if (currentLevelIndex === 1) { // Fase 2 (índice 1)
-      for (const liq of L.liquids) {
-        if (liq.type === 'lava' && aabb(b, liq)) {
+    if (currentLevelIndex === 1 || currentLevelIndex === 2) { // Fase 2 ou 3
+  for (const liq of L.liquids) {
+    if (liq.type === 'lava' && aabb(b, liq)) {
           // Se a caixa tocou na lava e ainda não está queimando
           if (!burningBoxes.has(b)) {
             burningBoxes.set(b, {
