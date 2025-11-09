@@ -37,6 +37,26 @@ const mapCanvas = document.getElementById('map');
 const mapCtx = mapCanvas.getContext('2d');
 
 
+
+// --- Inicializa os sons ---
+let audioInicial = new Audio("audioinicial.mp3");
+audioInicial.loop = true;
+audioInicial.volume = 0.4;
+
+let audioFase = new Audio("audiofase.mp3");
+audioFase.loop = true;
+audioFase.volume = 0.5;
+
+// 🔒 Ativa o som do menu só depois do primeiro clique do jogador
+let somAtivado = false;
+window.addEventListener("click", () => {
+  if (!somAtivado) {
+    somAtivado = true;
+    // Toca o som inicial do menu
+    audioInicial.play().catch(() => {});
+  }
+});
+
 // ===== SISTEMA DE PARTÍCULAS =====
 // Array para armazenar partículas de fogo
 let fireParticles = [];
@@ -82,6 +102,11 @@ let plataformaAtualFase3 = -1; // Índice da plataforma atualmente escondida
 let posicoesOriginaisFase3 = {}; // Para guardar o estado original das plataformas
 let controllingMover = null; // guarda a plataforma sendo controlada
 
+
+let somFogo = new Audio("fogobloco.mp3");
+somFogo.loop = true;    // o som fica queimando enquanto a caixa pega fogo
+somFogo.volume = 0.6;
+
 // -------------------------
 // Entrada via teclado
 // - Armazena teclas pressionadas
@@ -113,7 +138,13 @@ window.addEventListener('keydown', (e) => {
     useLever(); // mantém função original
   }
 
-  if (e.code === 'KeyR') restartLevel();
+  if (e.code === 'KeyR') {restartLevel()
+    try {
+      
+      somFogo.pause();
+      somFogo.currentTime = 0;
+    } catch (e) {}
+  };
 });
 
 window.addEventListener('keyup', (e)=> key[e.code] = false);
@@ -164,6 +195,17 @@ function createFireParticles(x, y, w, h) {
     });
   }
 }
+function pararTodosSonsDeFogo() {
+  for (const [box, data] of burningBoxes) {
+    if (data.som) {
+      try {
+        data.som.pause();
+        data.som.currentTime = 0;
+      } catch (e) {}
+    }
+  }
+  burningBoxes.clear(); // limpa o mapa (nenhuma caixa mais queimando)
+}
 
 /**
  * Atualiza as partículas de fogo
@@ -208,7 +250,14 @@ const treeNodes=[{id:1,x:100,y:380},{id:2,x:260,y:280},{id:3,x:420,y:190},{id:4,
 const treeEdges=[[1,2],[2,3],[3,4],[4,5]];
 
 /** Mostra a tela de menu */
-function showMenu(){ state=State.MENU; screenMenu.classList.add('show'); }
+function showMenu(){ 
+  state=State.MENU; screenMenu.classList.add('show');
+if (audioFase && !audioFase.paused) audioFase.pause();
+  if (audioInicial && audioInicial.paused) {
+    audioInicial.currentTime = 0;
+    audioInicial.play().catch(() => {});
+  }
+ }
 
 /** Esconde todas as telas (menu, mapa, resultado) */
 function hideAll(){
@@ -413,7 +462,7 @@ const levels = [
       {x:700,y:310,w:150,h:16}, //plataforma 6  
       {x:820,y:430,w:120,h:16},
       // NOVO: Plataforma de suporte fora do canvas
-{id: 'SUPORTE_BLOCO_3', x: 260 - 26, y: -26, w: 52, h: 16} 
+{id: 'SUPORTE_BLOCO_3', x: 260 - 26, y: -26, w: 52, h: 16,} 
 
     ],
 
@@ -558,6 +607,22 @@ boxes: [
 ];
 
 
+// === Inicialização de áudio ===
+if (!audioInicial) {
+  audioInicial = document.createElement('audio');
+  audioInicial.src = 'audioinicial.mp3';
+  audioInicial.loop = true;
+  audioInicial.volume = 0.4;
+  document.body.appendChild(audioInicial);
+}
+
+if (!audioFase) {
+  audioFase = document.createElement('audio');
+  audioFase.src = 'audiofase.mp3';
+  audioFase.loop = true;
+  audioFase.volume = 0.5;
+  document.body.appendChild(audioFase);
+}
 
 // Guarda uma cópia imutável de cada fase
 const baseLevels = JSON.parse(JSON.stringify(levels));
@@ -643,7 +708,12 @@ else {
         }
     }
       
-
+// 🎵 Troca para o áudio das fases
+  if (audioInicial && !audioInicial.paused) audioInicial.pause();
+  if (audioFase && audioFase.paused) {
+    audioFase.currentTime = 0;
+    audioFase.play().catch(() => {}); // evita erro de autoplay bloqueado
+  }
 
 
 }
@@ -652,6 +722,11 @@ else {
 /** Reinicia a fase atual corretamente */
 function restartLevel() {
   // 🧹 Esconde tela de morte, se existir
+     try {
+      
+      somFogo.pause();
+      somFogo.currentTime = 0;
+    } catch (e) {}
    controllingMover = null;
   alavanca = false;
   const deathScreen = document.getElementById('deathScreen');
@@ -694,6 +769,11 @@ function completeLevel(){
 
 /** Derrota */
 function failLevel(reason='Tempo esgotado!'){
+     try {
+      
+      somFogo.pause();
+      somFogo.currentTime = 0;
+    } catch (e) {}
    if (draw.playerEl) draw.playerEl.style.display='none';
   cancelAnimationFrame(frameId);
   
@@ -733,6 +813,9 @@ function useLever() {
   if (state !== State.GAME) return false;
   const L = levels[currentLevelIndex];
 
+const somAlavanca = new Audio('alavanca.mp3');
+  somAlavanca.volume = 1;
+  somAlavanca.play().catch(() => {});
   // 🔹 Se o jogador já está controlando a plataforma (fase 3),
   // apertar 'E' novamente faz ele sair, mesmo sem estar tocando a alavanca.
   if (currentLevelIndex === 2 && controllingMover) {
@@ -1155,11 +1238,16 @@ r._px = r.x; r._py = r.y;
   for (const liq of L.liquids) {
     if (liq.type === 'lava' && aabb(b, liq)) {
           // Se a caixa tocou na lava e ainda não está queimando
+    
           if (!burningBoxes.has(b)) {
             burningBoxes.set(b, {
               timer: 5000, // 5 segundos em ms
               particlesActive: true
-            });
+              
+            });try {
+      somFogo.currentTime = 0;
+      somFogo.play();
+    } catch (e) {}
           }
         }
       }
@@ -1210,6 +1298,10 @@ r._px = r.x; r._py = r.y;
           L.boxes.splice(idx, 1);
         }
         burningBoxes.delete(box);
+        try {
+    somFogo.pause();
+    somFogo.currentTime = 0;
+  } catch (e) {}
       }
     }
   }
@@ -1361,7 +1453,15 @@ for (const p of L.platforms) {
 }
 
 
-  for (const m of L.movers){ drawRect(m.x,m.y,m.w,m.h,'#6a4e39','#241a13'); }
+  // Carrega a imagem dos movers
+const moverImg = new Image();
+moverImg.src = 'movers.png';
+
+// No loop de desenho:
+for (const m of L.movers) {
+    ctx.drawImage(moverImg, m.x, m.y, m.w, m.h);
+}
+
 
   // --- LÍQUIDOS ---
   // Para 'lavaGif' e 'aguaGif' usamos <img> absolutos acima do canvas para manter a animação dos GIFs.
