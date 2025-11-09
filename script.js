@@ -431,7 +431,7 @@ const levels = [
     crystals: [
       {x:0,y:0,w:42,h:42},
       {x:900,y:90,w:42,h:42},
-      {x:530,y:200,w:42,h:42}
+      {x:530,y:300,w:42,h:42}
     ],
 
     // Porta que precisa de uma alavanca e uma placa
@@ -442,8 +442,8 @@ const levels = [
 
     // Alavanca que faz parte do mecanismo da porta
     levers: [
-      {id:'L3',x:720,y:290,w:18,h:18,active:false,toggles:['D3']},
-      { id: 'L3M', x: 520, y: 220, w: 18, h: 18, active: false, attachedTo: 'M3A' }
+      {id:'L3',x:720,y:282,w:30,h:30,active:false,toggles:['D3']},
+      { id: 'L3M', x: 520, y: 220, w: 30, h: 30, active: false, attachedTo: 'M3A' }
 
     ],
 
@@ -880,7 +880,7 @@ for (const lever of L.levers) {
     const mover = L.movers.find(m => m.id === lever.attachedTo);
     if (mover) {
       lever.x = mover.x + 20;
-      lever.y = mover.y - 20;
+      lever.y = mover.y - 25;
     }
   }
 }
