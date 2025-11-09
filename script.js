@@ -70,7 +70,7 @@ imgLeverActive.src = 'alavancaacionada.png';
 
 // Variáveis para a mecânica da Fase 3 (Plataformas que somem)
 // Variáveis para a mecânica da Fase 3 (Plataformas que somem)
-const PLATAFORMAS_FASE3 = [1, 2, 3]; // Índices das plataformas afetadas
+const PLATAFORMAS_FASE3 = [1, 2, 3,4]; // Índices das plataformas afetadas
 const TEMPO_ESCONDIDA = 30000; // 3 segundos (tempo que a plataforma fica invisível)
 const TEMPO_PAUSA_VISIVEL = 15000; // 0.5 segundos (tempo que todas ficam visíveis)
 const CICLO_TOTAL = TEMPO_ESCONDIDA + TEMPO_PAUSA_VISIVEL; // 3500 ms
@@ -407,7 +407,8 @@ const levels = [
       {x:0,y:500,w:960,h:40},
       {x:120,y:420,w:100,h:16}, //plataforma 1
       {x:310,y:330,w:100,h:16},//plataforma 2
-      {x:320,y:150,w:100,h:16}, //plataforma 4
+      {x:320,y:150,w:100,h:16}, //plataforma 3
+      {x:510,y:350,w:150,h:16}, //plataforma 4
       {x:120,y:130,w:100,h:16}, //plataforma 5
       {x:700,y:290,w:150,h:16}, //plataforma 6
       
@@ -766,27 +767,40 @@ function update(dt){
   timeLeft -= dt/1000;
   if (timeLeft<=0) return failLevel('Tempo esgotado!');
   hudTimer.textContent='⏱ '+formatTime(timeLeft);
+// --- Movimento do jogador e controle da plataforma ---
 
-  const left = key['ArrowLeft'] || key['KeyA'];
+const left  = key['ArrowLeft'] || key['KeyA'];
 const right = key['ArrowRight'] || key['KeyD'];
 const jumpKey = key['ArrowUp'] || key['Space'] || key['KeyW'];
 
 if (controllingMover) {
-  // 🔹 Controlando a plataforma
+  // 🔹 Controle manual da plataforma (fase 3)
   const mover = controllingMover;
+  // --- NOVO: Limitação de borda para a plataforma controlada ---
+  const W = game.width; // Pega a largura do canvas
+  if (mover.x < 0) {
+    mover.x = 0;
+  } else if (mover.x + mover.w > W) {
+    mover.x = W - mover.w;
+  }
 
   if (left) mover.x -= mover.speed * (dt / 16);
   if (right) mover.x += mover.speed * (dt / 16);
 
-  // mantém o jogador em cima da plataforma
+  // Mantém o jogador em cima da plataforma
   player.vx = 0;
   player.vy = 0;
   player.x = mover.x + mover.w / 2 - player.w / 2;
   player.y = mover.y - player.h;
   player.onGround = true;
 
+  // 🔸 Força o gif do personagem a ficar parado
+  if (player.sprite) {
+    player.sprite = playerSprites.idle;
+  }
+
 } else {
-  // 🔹 Controle normal do jogador
+  // 🔹 Movimento normal do personagem
   if (left) player.vx -= 0.9;
   if (right) player.vx += 0.9;
   player.vx *= FRICTION;
@@ -799,7 +813,14 @@ if (controllingMover) {
     player.vy = -12.5;
     player.onGround = false;
   }
+
+  // Atualiza sprite (andar/parado)
+  if (player.sprite) {
+    if (Math.abs(player.vx) > 0.1) player.sprite = playerSprites.walk;
+    else player.sprite = playerSprites.idle;
+  }
 }
+
 
 
 //movers pra fazer andar
