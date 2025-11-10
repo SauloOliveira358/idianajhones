@@ -453,7 +453,7 @@ const levels = [
 
     // Plataformas
     platforms: [
-      {x:0,y:500,w:960,h:40},
+      {x:0,y:500,w:960,h:40,img: 'chaofase3.png'},    // Chão principal (ocupa toda a base)
       {x:120,y:420,w:100,h:16}, //plataforma 1
       {x:310,y:330,w:100,h:16},//plataforma 2
       {x:320,y:150,w:100,h:16}, //plataforma 3
