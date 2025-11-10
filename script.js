@@ -1437,7 +1437,10 @@ for (const p of L.platforms) {
   if (!p.img) {
     if (currentLevelIndex === 1) {
       p.img = 'PlataformaLava.png'; // Imagem para a Fase 2
-    } else {
+    } if(currentLevelIndex === 2) {
+      p.img = 'plataformafase3.png'; // Imagem para a Fase 3
+    }
+      else {
       p.img = 'plataforma.png'; // Imagem padrão para outras fases
     }
   } // todas plataformas têm imagem padrão
