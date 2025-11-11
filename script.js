@@ -247,8 +247,17 @@ function drawFireParticles() {
 // -------------------------
 // Mapa de fases: nós e ligações (arvore)
 // -------------------------
-const treeNodes=[{id:1,x:100,y:380},{id:2,x:260,y:280},{id:3,x:420,y:190},{id:4,x:600,y:260},{id:5,x:780,y:160}];
-const treeEdges=[[1,2],[2,3],[3,4],[4,5]];
+const treeNodes = [
+  { id: 1, x: 150, y: 330 }, // fase 1 — esquerda
+  { id: 2, x: 450, y: 230 }, // fase 2 — centro
+  { id: 3, x: 750, y: 130 }  // fase 3 — mais alta à direita
+];
+
+const treeEdges = [
+  [1, 2],
+  [2, 3]
+];
+
 
 /** Mostra a tela de menu */
 function showMenu(){ 
@@ -1370,14 +1379,15 @@ function draw(){
 for (const p of L.platforms) {
   if (!p.img) {
     if (currentLevelIndex === 1) {
-      p.img = 'PlataformaLava.png'; // Imagem para a Fase 2
-    } if(currentLevelIndex === 2) {
+      p.img = 'plataformafase2.png'; // Imagem para a Fase 2
+    } else if (currentLevelIndex === 2) { // Use 'else if' aqui
       p.img = 'plataformafase3.png'; // Imagem para a Fase 3
-    }
-      else {
+    } else { // E o 'else' final para todas as outras fases
       p.img = 'plataforma.png'; // Imagem padrão para outras fases
     }
-  } // todas plataformas têm imagem padrão
+  }
+  
+  // O restante do seu código de desenho:
   if (p.img) {
     if (!p._imgEl) {
       p._imgEl = new Image();
