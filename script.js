@@ -23,6 +23,7 @@ const hudCrystals = document.getElementById('hudCrystals');
 const hudTimer = document.getElementById('hudTimer');
 const btnRestart = document.getElementById('btnRestart');
 const btnToMap = document.getElementById('btnToMap');
+let endVideoPlaying = false; // evita reentrar na sequência do vídeo final
 
 
 
@@ -77,7 +78,7 @@ let alavancaArmada = false;  // TRUE quando a alavanca da Fase 2 for acionada
 let plataformaGirou = false; // TRUE quando a plataforma efetivamente girar
                 // estado atual
 let currentLevelIndex = -1;             // índice da fase ativa
-let progress = { unlocked: 1, completed: [] }; // progresso (fases liberadas/concluídas)
+let progress = { unlocked: 3, completed: [] }; // progresso (fases liberadas/concluídas)
 
 let timeLeft = 0, frameId;
 const key = {};
@@ -718,6 +719,57 @@ function completeLevel(){
   if (draw.crystalEls) draw.crystalEls.forEach(el => el.style.display='none');
 }
 
+function playLevel3EndVideoThenWin() {
+  if (endVideoPlaying) return;
+  endVideoPlaying = true;
+
+  // pausa o loop para não processar o jogo enquanto o vídeo toca
+  try { if (frameId) cancelAnimationFrame(frameId); } catch (e) {}
+
+  // esconde elementos do jogo enquanto o vídeo roda
+  if (draw?.playerEl) draw.playerEl.style.display = 'none';
+  if (draw?.lavaEls) draw.lavaEls.forEach(el => el.style.display = 'none');
+  if (draw?.aguaEls) draw.aguaEls.forEach(el => el.style.display = 'none');
+  if (draw?.crystalEls) draw.crystalEls.forEach(el => el.style.display = 'none');
+
+  const parent = game.parentElement || document.body;
+  if (getComputedStyle(parent).position === 'static') {
+    parent.style.position = 'relative';
+  }
+
+  const vid = document.createElement('video');
+  vid.src = 'fimjogo.mp4';
+  vid.autoplay = true;
+  vid.playsInline = true;
+  vid.muted = true;             // garante autoplay em browsers; mude para false se quiser áudio
+  vid.loop = false;
+
+  // vídeo em tela cheia sobre o jogo
+  Object.assign(vid.style, {
+    position: 'absolute',
+    left: '0', top: '0',
+    width: '100%', height: '100%',
+    objectFit: 'cover',
+    zIndex: '9999',           // acima de tudo
+    pointerEvents: 'none',
+  });
+
+  parent.appendChild(vid);
+
+  // tenta tocar (caso o navegador bloqueie)
+  vid.play?.().catch(()=>{ /* ignorar */ });
+
+  // após 5s: remove o vídeo e conclui a fase normalmente
+  setTimeout(() => {
+    try { vid.pause?.(); } catch(e) {}
+    try { parent.removeChild(vid); } catch(e) {}
+    endVideoPlaying = false;
+
+    // chama a vitória padrão (mostra tela de resultado etc.)
+    completeLevel();
+  }, 5000);
+}
+
 /** Derrota */
 function failLevel(reason='Tempo esgotado!'){
      try {
@@ -1303,9 +1355,18 @@ updateFireParticles(dt);
     }
   }
 
-  for (const d of L.doors){
-    if(d.open && aabb(player,d)) return completeLevel();
+ for (const d of L.doors) {
+  if (d.open && aabb(player, d)) {
+    if (currentLevelIndex === 2) {
+      // Fase 3: toca o vídeo final por 5s e só então finaliza
+      playLevel3EndVideoThenWin();
+      return; // não deixa continuar a lógica deste frame
+    } else {
+      return completeLevel(); // fases normais
+    }
   }
+}
+
   // 🧱 COLISÃO COM AS BORDAS DO CANVAS — paredes invisíveis
   const canvas = document.getElementById('game');
   if (player.x < 0) player.x = 0; // parede esquerda
