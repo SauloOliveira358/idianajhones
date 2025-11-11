@@ -5,7 +5,44 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ruínas Antigas — Mapa da Árvore & Fases</title>
   <link rel="stylesheet" href="style.css">
+
+  <style>
+    /* === Estilo do título tipo Indiana Jones (versão limpa, sem sombra preta) === */
+    .game-title {
+      font-family: 'Impact', 'Arial Black', sans-serif;
+      font-size: 3.8em;
+      font-style: italic;
+      font-weight: 900;
+      background: linear-gradient(to bottom, #fff67a 0%, #ffcc33 35%, #ff8800 75%, #ff4d00 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: 3px;
+      line-height: 1.1;
+      transform: skew(-8deg);
+      margin-bottom: 0.2em;
+      text-shadow:
+        1px 1px 2px rgba(255, 200, 0, 0.4),
+        0 0 6px rgba(255, 160, 0, 0.6);
+    }
+
+    .game-subtitle {
+  display: block;
+  font-family: 'Arial Black', sans-serif;
+  font-size: 1.8em;
+  font-style: italic;
+  font-weight: 800;
+  color: #ffcc33; /* mesmo tom principal do gradiente */
+  text-shadow:
+    1px 1px 2px rgba(255, 200, 0, 0.4),
+    0 0 6px rgba(255, 160, 0, 0.6);
+  letter-spacing: 1.5px;
+  transform: skew(-8deg);
+  margin-top: -0.1em;
+  margin-bottom: 1.3em;
+}
+  </style>
 </head>
+
 <body>
   <header class="hud">
     <div class="hud-left">
@@ -23,22 +60,21 @@
     <canvas id="game" width="960" height="540" aria-label="Canvas do jogo Ruínas Antigas"></canvas>
 
     <!-- Menu inicial -->
-     <!-- Menu inicial -->
     <section id="screenMenu" class="overlay show">
       <video id="menuVideo" autoplay loop muted playsinline>
-  <source src="fundocenario.mp4" type="video/mp4">
-</video>
+        <source src="fundocenario.mp4" type="video/mp4">
+      </video>
       <div class="card">
-        <h1>IDIANJHONES</h1>
+        <h1 class="game-title">INDIANA</h1>
+        <span class="game-subtitle">Ruins of Time</span>
+
         <button id="btnPlay" class="cta">Iniciar Jogo</button>
         <ul class="controls">
-  <li><span class="arrow">⬅</span> / <span class="arrow">➡</span> — Mover</li>
-  <li><span class="arrow">⬆</span> / <span class="key">⎵ Espaço</span> — Pular</li>
-  <li><span class="key">E</span> — Usar alavanca</li>
-  <li><span class="key">R</span> — Reiniciar &nbsp; | &nbsp; <span class="key">Esc</span> — Voltar ao mapa</li>
-</ul>
-
-
+          <li><span class="arrow">⬅</span> / <span class="arrow">➡</span> — Mover</li>
+          <li><span class="arrow">⬆</span> / <span class="key">⎵ Espaço</span> — Pular</li>
+          <li><span class="key">E</span> — Usar alavanca</li>
+          <li><span class="key">R</span> — Reiniciar &nbsp; | &nbsp; <span class="key">Esc</span> — Voltar ao mapa</li>
+        </ul>
       </div>
     </section>
 
@@ -71,8 +107,6 @@
     </section>
   </main>
 
-
   <script src="script.js"></script>
 </body>
 </html>
- 

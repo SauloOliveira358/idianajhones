@@ -305,35 +305,52 @@ btnToMap.addEventListener('click', gotoMap);
  * - Número da fase dentro do nó
  */
 function renderMap(){
-  const w=mapCanvas.width,h=mapCanvas.height;
+  const w = mapCanvas.width, h = mapCanvas.height;
+  mapCtx.clearRect(0, 0, w, h);
 
-  // fundo
-  mapCtx.clearRect(0,0,w,h);
-  const grd=mapCtx.createLinearGradient(0,0,0,h);
-  grd.addColorStop(0,'#2f2a1b'); grd.addColorStop(1,'#0f0e09');
-  mapCtx.fillStyle=grd; mapCtx.fillRect(0,0,w,h);
+  // 🔹 Fundo com imagem personalizada
+  const bg = new Image();
+  bg.src = 'fundomapa.png';
+  bg.onload = () => {
+    mapCtx.drawImage(bg, 0, 0, w, h);
 
-  // ramos
-  mapCtx.strokeStyle='#a07a3b'; mapCtx.lineWidth=8; mapCtx.lineCap='round'; mapCtx.beginPath();
-  for (const [a,b] of treeEdges){
-    const na=treeNodes.find(n=>n.id===a), nb=treeNodes.find(n=>n.id===b);
-    mapCtx.moveTo(na.x,na.y); mapCtx.lineTo(nb.x,nb.y);
+    // Agora desenha o resto normalmente (linhas e nós)
+    drawMapElements();
+  };
+}
+
+// 🔸 Move o restante do código de renderização (arestas e nós) para esta função auxiliar
+function drawMapElements() {
+  const w = mapCanvas.width, h = mapCanvas.height;
+
+  // ramos (ligações)
+  mapCtx.strokeStyle = '#a07a3b';
+  mapCtx.lineWidth = 8;
+  mapCtx.lineCap = 'round';
+  mapCtx.beginPath();
+  for (const [a, b] of treeEdges) {
+    const na = treeNodes.find(n => n.id === a),
+          nb = treeNodes.find(n => n.id === b);
+    mapCtx.moveTo(na.x, na.y);
+    mapCtx.lineTo(nb.x, nb.y);
   }
   mapCtx.stroke();
 
   // nós
-  for (const n of treeNodes){
-    const unlocked=n.id<=progress.unlocked;
-    const done=progress.completed.includes(n.id);
-
+  for (const n of treeNodes) {
+    const unlocked = n.id <= progress.unlocked;
+    const done = progress.completed.includes(n.id);
     mapCtx.beginPath();
-    mapCtx.arc(n.x,n.y,16,0,Math.PI*2);
-    mapCtx.fillStyle = done? '#00e676' : (unlocked? '#fdd835' : '#666');
+    mapCtx.arc(n.x, n.y, 16, 0, Math.PI * 2);
+    mapCtx.fillStyle = done ? '#00e676' : (unlocked ? '#fdd835' : '#666');
     mapCtx.fill();
-    mapCtx.lineWidth=3; mapCtx.strokeStyle='#2c1e12'; mapCtx.stroke();
-
-    mapCtx.fillStyle='#1b1412'; mapCtx.font='bold 13px system-ui'; mapCtx.textAlign='center';
-    mapCtx.fillText(String(n.id), n.x, n.y+4);
+    mapCtx.lineWidth = 3;
+    mapCtx.strokeStyle = '#2c1e12';
+    mapCtx.stroke();
+    mapCtx.fillStyle = '#1b1412';
+    mapCtx.font = 'bold 13px system-ui';
+    mapCtx.textAlign = 'center';
+    mapCtx.fillText(String(n.id), n.x, n.y + 4);
   }
 }
 
@@ -384,9 +401,9 @@ const levels = [
 
     // Cristais — itens coletáveis (aumentam pontuação ou completam objetivos)
     crystals: [
-      {x:370,y:370,w:42,h:42},
-      {x:535,y:280,w:42,h:42},
-      {x:710,y:230,w:42,h:42}
+      {x:370,y:370,w:15,h:15},
+      {x:535,y:280,w:15,h:15},
+      {x:710,y:230,w:15,h:15}
     ],
 
     // Portas — podem ser abertas por placas ou alavancas
@@ -433,9 +450,9 @@ const levels = [
 
   // Cristais
   crystals: [
-    {x:320,y:350,w:42,h:42},          // Cristal 1: Perto da plataforma 2
-    {x:450,y:100,w:42,h:42},          // Cristal 2: Perto da plataforma 3 (a mais alta)
-    {x:790,y:200,w:42,h:42}           // Cristal 3: Perto da plataforma 4
+    {x:320,y:350,w:15,h:15},          // Cristal 1: Perto da plataforma 2
+    {x:450,y:100,w:15,h:15},          // Cristal 2: Perto da plataforma 3 (a mais alta)
+    {x:790,y:210,w:15,h:15}           // Cristal 3: Perto da plataforma 4
   ],
 
   // Porta no meio, em cima da plataforma 3
@@ -490,9 +507,9 @@ const levels = [
 
     // Cristais
     crystals: [
-      {x:0,y:0,w:42,h:42},
-      {x:900,y:90,w:42,h:42},
-      {x:530,y:300,w:42,h:42}
+      {x:0,y:0,w:15,h:15},
+      {x:900,y:90,w:15,h:15},
+      {x:530,y:300,w:15,h:15}
     ],
 
     // Porta que precisa de uma alavanca e uma placa
