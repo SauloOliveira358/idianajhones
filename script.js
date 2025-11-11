@@ -77,7 +77,7 @@ let alavancaArmada = false;  // TRUE quando a alavanca da Fase 2 for acionada
 let plataformaGirou = false; // TRUE quando a plataforma efetivamente girar
                 // estado atual
 let currentLevelIndex = -1;             // índice da fase ativa
-let progress = { unlocked: 5, completed: [] }; // progresso (fases liberadas/concluídas)
+let progress = { unlocked: 1, completed: [] }; // progresso (fases liberadas/concluídas)
 
 let timeLeft = 0, frameId;
 const key = {};
@@ -94,8 +94,8 @@ imgLeverActive.src = 'alavancaacionada.png';
 // Variáveis para a mecânica da Fase 3 (Plataformas que somem)
 // Variáveis para a mecânica da Fase 3 (Plataformas que somem)
 const PLATAFORMAS_FASE3 = [1, 2, 3,4]; // Índices das plataformas afetadas
-const TEMPO_ESCONDIDA = 30000; // 3 segundos (tempo que a plataforma fica invisível)
-const TEMPO_PAUSA_VISIVEL = 25000; // 0.5 segundos (tempo que todas ficam visíveis)
+const TEMPO_ESCONDIDA = 20000; // 3 segundos (tempo que a plataforma fica invisível)
+const TEMPO_PAUSA_VISIVEL = 20000; // 0.5 segundos (tempo que todas ficam visíveis)
 const CICLO_TOTAL = TEMPO_ESCONDIDA + TEMPO_PAUSA_VISIVEL; // 3500 ms
 // As outras variáveis globais (timerPlataforma3, plataformaAtualFase3, etc.) permanecem as mesmas.
 
