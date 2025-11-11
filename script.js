@@ -263,6 +263,11 @@ const treeEdges = [
 
 /** Mostra a tela de menu */
 function showMenu(){ 
+  try {
+      
+      somFogo.pause();
+      somFogo.currentTime = 0;
+    } catch (e) {}
   state=State.MENU; screenMenu.classList.add('show');
 if (audioFase && !audioFase.paused) audioFase.pause();
   if (audioInicial && audioInicial.paused) {
@@ -280,6 +285,11 @@ function hideAll(){
 
 /** Vai para a tela de mapa; se estava jogando, cancela o frame atual */
 function gotoMap(){
+  try {
+      
+      somFogo.pause();
+      somFogo.currentTime = 0;
+    } catch (e) {}
   if (state===State.GAME) cancelAnimationFrame(frameId);
   state=State.MAP;
   hideAll();
@@ -450,7 +460,7 @@ const levels = [
 
   // Cristais
   crystals: [
-    {x:320,y:350,w:15,h:15},          // Cristal 1: Perto da plataforma 2
+    {x:320,y:370,w:15,h:15},          // Cristal 1: Perto da plataforma 2
     {x:450,y:100,w:15,h:15},          // Cristal 2: Perto da plataforma 3 (a mais alta)
     {x:790,y:210,w:15,h:15}           // Cristal 3: Perto da plataforma 4
   ],
