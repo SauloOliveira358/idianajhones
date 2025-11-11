@@ -84,7 +84,8 @@ imgPlataforma.src = 'plataforma.png';
 
 const imgLeverInactive = new Image();
 imgLeverInactive.src = 'alavanca.png';
-
+const imgLeverL3M = new Image();
+imgLeverL3M.src = 'alavancamovers.png'; 
 const imgLeverActive = new Image();
 imgLeverActive.src = 'alavancaacionada.png';
 
@@ -511,101 +512,7 @@ boxes: [
 
   },
 
-  // ===== FASE 4 =====
-  { 
-    name: 'Fase 4 — Engrenagens Verdes',
-    timeLimit: 110,
-    spawn: {x:60, y:450},
-
-    platforms: [
-      {x:0,y:500,w:960,h:40},
-      {x:140,y:420,w:160,h:16}, // plataforma 1
-      {x:340,y:360,w:140,h:16},  // plataforma 2
-      {x:540,y:300,w:140,h:16},  // plataforma 3
-      {x:740,y:240,w:140,h:16}, // plataforma 4
-      {x:850,y:430,w:90,h:16}   // plataforma 5
-    ],
-
-    movers: [], // Nenhum móvel
-
-    // Água estática (sem GIF)
-    liquids: [
-      {x:470,y:486,w:160,h:14,type:'agua'}
-    ],
-
-    crystals: [
-      {x:370,y:330,w:20,h:20},
-      {x:570,y:270,w:20,h:20},
-      {x:770,y:210,w:20,h:20}
-    ],
-
-    // Porta controlada por duas alavancas
-    doors: [
-      {id:'D4',x:900,y:360,w:36,h:90,open:false,requires:['L4A','L4B']}
-    ],
-
-    // Duas alavancas que precisam ser ativadas para abrir D4
-    levers: [
-      {id:'L4A',x:340,y:342,w:18,h:18,active:false,toggles:['D4']},
-      {id:'L4B',x:540,y:282,w:18,h:18,active:false,toggles:['D4']}
-    ],
-
-    plates: [], // Nenhuma placa
-    boxes: []   // Nenhuma caixa
-  },
-
-  // ===== FASE 5 =====
-  { 
-    name: 'Fase 5 — Câmara Final',
-    timeLimit: 120,
-    spawn: {x:60, y:450},
-
-    platforms: [
-      {x:0,y:500,w:960,h:40},
-      {x:130,y:430,w:160,h:16},
-      {x:310,y:390,w:120,h:16},
-      {x:480,y:350,w:120,h:16},
-      {x:650,y:310,w:120,h:16},
-      {x:820,y:270,w:120,h:16}
-    ],
-
-    movers: [], // Nenhum móvel
-
-    // Ácido — pode causar morte instantânea ao tocar
-    liquids: [
-      {x:420,y:486,w:150,h:14,type:'acido'}
-    ],
-
-    crystals: [
-      {x:340,y:360,w:20,h:20},
-      {x:520,y:320,w:20,h:20},
-      {x:690,y:280,w:20,h:20},
-      {x:860,y:240,w:20,h:20}
-    ],
-
-    // Porta final que requer uma placa e uma alavanca
-    doors: [
-      {id:'D5',x:900,y:340,w:36,h:110,open:false,requires:['P5','L5A']}
-    ],
-
-    // Alavanca que abre a porta D5
-    levers: [
-      {id:'L5A',x:820,y:252,w:18,h:18,active:false,toggles:['D5']}
-    ],
-
-    // Placa de pressão inicial
-    plates: [
-      {id:'P5',x:130,y:426,w:40,h:6,pressed:false,opens:['D5']}
-    ],
-
-    // Duas caixas (uma no início, outra no topo)
-    boxes: [
-      {x:170,y:410,w:26,h:26,vx:0,vy:0},
-      {x:780,y:250,w:26,h:26,vx:0,vy:0}
-    ]
-  }
 ];
-
 
 // === Inicialização de áudio ===
 if (!audioInicial) {
@@ -813,25 +720,52 @@ function useLever() {
   if (state !== State.GAME) return false;
   const L = levels[currentLevelIndex];
 
-const somAlavanca = new Audio('alavanca.mp3');
-  somAlavanca.volume = 1;
-  somAlavanca.play().catch(() => {});
+
   // 🔹 Se o jogador já está controlando a plataforma (fase 3),
   // apertar 'E' novamente faz ele sair, mesmo sem estar tocando a alavanca.
   if (currentLevelIndex === 2 && controllingMover) {
-    controllingMover = null;
-    player.onGround = true;
-    player.vx = 0;
-    player.vy = 0;
-    return true;
-    
+  controllingMover = null;
+  player.onGround = true;
+  player.vx = 0;
+  player.vy = 0;
+
+  // 🔹 NOVO TRECHO: ao sair do controle, reseta a alavanca e o mover
+  const mover = L.movers.find(m => m.id === 'M3A');
+  const lever = L.levers.find(l => l.id === 'L3M');
+  if (mover) {
+    mover.active = false;
+    mover.img = 'movers.png'; // volta para imagem normal
   }
+  if (lever) {
+    lever.active = false;
+    lever.img = 'alavanca.png'; // volta para alavanca padrão
+  }
+
+  return true;
+}
+
 
   // 🔹 Caso normal — procurar alavancas e acionar
   for (const lever of L.levers) {
     if (aabb(player, lever)) {
-      
+      const somAlavanca = new Audio('alavanca.mp3');
+  somAlavanca.volume = 1;
+  somAlavanca.play().catch(() => {});
     lever.active = !lever.active;
+    // --- Controle da alavanca L3M que ativa o mover M3A ---
+if (lever.id === 'L3M') {
+  const mover = L.movers.find(m => m.id === lever.attachedTo);
+  if (mover) {
+    mover.active = lever.active;
+
+    // muda a imagem do mover conforme o estado
+    mover.img = lever.active ? 'moversverde.png' : 'movers.png';
+  }
+
+  // muda também o sprite da própria alavanca
+  lever.img = lever.active ? 'alavancamoversacionou.png' : 'alavancamovers.png';
+}
+
       triggers[lever.id] = lever.active;
 
       // 🔸 Fase 3 — soltar o bloco ao acionar a alavanca L3
@@ -1309,8 +1243,8 @@ updateFireParticles(dt);
 
   for (const liq of L.liquids){
     if (aabb(player, liq)){
-      const name = (liq.type==='lavaGif' ? 'lava' : (liq.type==='aguaGif' ? 'água' : liq.type));
-      return failLevel('Você caiu em '+name+'!');
+      const name = (liq.type==='lavaGif' ? 'lava' : (liq.type==='agua1.png' ? 'água' : liq.type));
+      return failLevel('Você caiu na '+name+'!' + ' Burro');
     }
   }
 
@@ -1456,13 +1390,10 @@ for (const p of L.platforms) {
 }
 
 
-  // Carrega a imagem dos movers
-const moverImg = new Image();
-moverImg.src = 'movers.png';
-
-// No loop de desenho:
 for (const m of L.movers) {
-    ctx.drawImage(moverImg, m.x, m.y, m.w, m.h);
+  const moverImg = new Image();
+  moverImg.src = m.img || 'movers.png';
+  ctx.drawImage(moverImg, m.x, m.y, m.w, m.h);
 }
 
 
@@ -1703,9 +1634,22 @@ if (interacting) {
   for (const p of L.plates){ drawRect(p.x,p.y,p.w,p.h, p.pressed?'#01cf38ff':'#ff0000ff', '#1f150f'); }
 // Desenhar alavancas com imagens PNG
 for (const l of L.levers) {
-  const leverImg = l.active ? imgLeverActive : imgLeverInactive;
-  ctx.drawImage(leverImg, l.x, l.y, l.w, l.h);
+  const img = new Image();
+
+  // Verifica se é a alavanca especial dos movers
+  if (l.id && l.id.includes('L3M')) {
+    img.src = l.active ? 'alavancamoversacionou.png' : 'alavancamovers.png';
+  } 
+  // Caso contrário, é uma alavanca comum
+  else {
+    img.src = l.active ? 'alavancaacionada.png' : 'alavanca.png';
+  }
+
+  ctx.drawImage(img, l.x, l.y, l.w, l.h);
 }
+
+
+
  // --- PORTAS (invisível quando fechada, aparece quando liberada) ---
 
 
