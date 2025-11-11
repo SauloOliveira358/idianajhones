@@ -78,7 +78,7 @@ let alavancaArmada = false;  // TRUE quando a alavanca da Fase 2 for acionada
 let plataformaGirou = false; // TRUE quando a plataforma efetivamente girar
                 // estado atual
 let currentLevelIndex = -1;             // índice da fase ativa
-let progress = { unlocked: 3, completed: [] }; // progresso (fases liberadas/concluídas)
+let progress = { unlocked: 1, completed: [] }; // progresso (fases liberadas/concluídas)
 
 let timeLeft = 0, frameId;
 const key = {};
