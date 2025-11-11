@@ -376,8 +376,8 @@ const levels = [
     // Líquidos — podem ser lava, água ou ácido
     // type:'aguaGif' indica que será renderizada como GIF animado
     liquids: [
-      {x:420,y:499,w:140,h:20,type:'agua1.png'}, // Lago de água
-      {x:620,y:499,w:110,h:20,type:'agua1.png'}  // Outro pequeno lago
+      {x:420,y:499,w:140,h:20,type:'aguaGif'}, // Lago de água
+      {x:620,y:499,w:110,h:20,type:'aguaGif'}  // Outro pequeno lago
     ],
 
     // Cristais — itens coletáveis (aumentam pontuação ou completam objetivos)
@@ -401,7 +401,7 @@ const levels = [
 
     // Caixas empurráveis (podem ser usadas para acionar placas)
     boxes: [
-      {x:737,y:264,w:26,h:26,vx:0,vy:0}
+      {x:737,y:264,w:26,h:26,vx:0,vy:0,img:'blocofase1.png'}
     ]
   },
 
@@ -451,7 +451,7 @@ const levels = [
 
   // Caixa empurrável
   boxes: [
-    {x:500,y:414,w:26,h:26,vx:0,vy:0, img:'carvao.png'}
+    {x:500,y:414,w:26,h:26,vx:0,vy:0, img:'blocofase3.png'}
   ]
 },
 
@@ -515,7 +515,7 @@ const levels = [
   // Uma caixa que pode ser usada para ativar a placa
 boxes: [
   // NOVO BLOCO: Posicionado em cima da plataforma de suporte
-{id: 'BLOCO_SOLTO_3', x: 260, y:-35, w: 26, h: 26, vx: 0, vy: 0, img: 'bloco6.png'}
+{id: 'BLOCO_SOLTO_3', x: 260, y:-35, w: 26, h: 26, vx: 0, vy: 0, img: 'blocofase3.png'}
 
 ]
 
@@ -1252,7 +1252,7 @@ updateFireParticles(dt);
 
   for (const liq of L.liquids){
     if (aabb(player, liq)){
-      const name = (liq.type==='lavaGif' ? 'lava' : (liq.type==='agua1.png' ? 'água' : liq.type));
+      const name = (liq.type==='lavaGif' ? 'lava' : (liq.type==='aguaGif' ? 'água' : liq.type));
       return failLevel('Você caiu na '+name+'!' + ' Burro');
     }
   }
@@ -1454,7 +1454,7 @@ for (let i = 0; i < L.liquids.length; i++) {
 
   // água animada (aguaGif)
   else if (liq.type === 'aguaGif') {
-    if (!draw.aguaEls[i]) createLiquidElement(draw.aguaEls, 'agua.gif', 'água');
+    if (!draw.aguaEls[i]) createLiquidElement(draw.aguaEls, 'agua5.gif', 'água');
     const img = draw.aguaEls[i];
     const lx = rect.left + liq.x * sx;
     const ly = rect.top  + liq.y * sy;
