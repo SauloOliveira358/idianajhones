@@ -263,6 +263,8 @@ const treeEdges = [
 
 /** Mostra a tela de menu */
 function showMenu(){ 
+  document.querySelector('.hud').classList.remove('show');
+
   try {
       
       somFogo.pause();
@@ -285,6 +287,8 @@ function hideAll(){
 
 /** Vai para a tela de mapa; se estava jogando, cancela o frame atual */
 function gotoMap(){
+  document.querySelector('.hud').classList.remove('show');
+
   try {
       
       somFogo.pause();
@@ -628,6 +632,8 @@ else {
 
   hideAll();
   state = State.GAME;
+  document.querySelector('.hud').classList.add('show');
+
   lastTick = performance.now();
   frameId = requestAnimationFrame(loop);
 
