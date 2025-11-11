@@ -24,6 +24,8 @@ const hudTimer = document.getElementById('hudTimer');
 const btnRestart = document.getElementById('btnRestart');
 const btnToMap = document.getElementById('btnToMap');
 
+
+
 const screenMenu = document.getElementById('screenMenu');
 const screenMap  = document.getElementById('screenMap');
 const screenResult = document.getElementById('screenResult');
@@ -364,10 +366,10 @@ const levels = [
     // Plataformas fixas — retângulos sólidos onde o jogador pode andar
     platforms: [
       {x:0,y:500,w:960,h:40,img:'chao2.png'},    // Chão principal (ocupa toda a base)
-      {x:120,y:440,w:160,h:16, imgPlataforma},  // Plataforma secundária
-      {x:320,y:390,w:120,h:16, imgPlataforma},  // ...
-      {x:500,y:340,w:120,h:16, imgPlataforma},
-      {x:680,y:290,w:140,h:16, imgPlataforma},
+      {x:120,y:410,w:160,h:16, imgPlataforma},  // Plataforma secundária
+      {x:320,y:350,w:120,h:16, imgPlataforma},  // ...
+      {x:500,y:320,w:120,h:16, imgPlataforma},
+      {x:680,y:270,w:140,h:16, imgPlataforma},
       {x:820,y:430,w:120,h:16,imgPlataforma}
     ],
 
@@ -377,14 +379,14 @@ const levels = [
     // type:'aguaGif' indica que será renderizada como GIF animado
     liquids: [
       {x:420,y:499,w:140,h:20,type:'aguaGif'}, // Lago de água
-      {x:620,y:499,w:110,h:20,type:'aguaGif'}  // Outro pequeno lago
+      {x:620,y:499,w:200,h:30,type:'aguaGif'}  // Outro pequeno lago
     ],
 
     // Cristais — itens coletáveis (aumentam pontuação ou completam objetivos)
     crystals: [
-      {x:355,y:350,w:42,h:42},
-      {x:535,y:300,w:42,h:42},
-      {x:710,y:250,w:42,h:42}
+      {x:370,y:370,w:42,h:42},
+      {x:535,y:280,w:42,h:42},
+      {x:710,y:230,w:42,h:42}
     ],
 
     // Portas — podem ser abertas por placas ou alavancas
